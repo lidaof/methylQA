@@ -129,6 +129,7 @@ int main_medip (int argc, char *argv[]) {
         //writeInsertsize(slPair, outInsertfile);
         fragbase = plotInsertsize(slPair, output); //quite time consuming -- fixed
     }
+    fprintf(stderr, "* fragments total base: %lli\n", fragbase);
 
     if (optm != NULL){
         fprintf(stderr, "* Generating CpG stats\n");

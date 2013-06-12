@@ -1,5 +1,5 @@
 KENT=/opt/kent/src
-SAMTOOLS=/opt/samtools-0.1.17
+SAMTOOLS=/opt/samtools
 
 CC=gcc
 COPT= -O -g

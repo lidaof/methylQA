@@ -112,6 +112,7 @@ int main_density (int argc, char *argv[]) {
         //writeInsertsize(slPair, outInsertfile);
         fragbase = plotInsertsize(slPair, output); //quite time consuming -- fixed
     }
+    fprintf(stderr, "* fragments total base: %lli\n", fragbase);
     
     //sort extend bed
     fprintf(stderr, "* Sorting extended bed\n");
