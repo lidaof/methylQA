@@ -16,7 +16,7 @@ static int usage() {
 int main(int argc, char *argv[]) {
     if (argc < 2) return usage();
     if (strcmp(argv[1], "medip") == 0) return main_medip(argc-1, argv+1);
-    else if (strcmp(argv[1], "cpg") == 0) return main_cpg(argc-1, argv+1);
+    else if (strcmp(argv[1], "mre") == 0) return main_cpg(argc-1, argv+1);
     else if (strcmp(argv[1], "density") == 0) return main_density(argc-1, argv+1);
     else if (strcmp(argv[1], "genomecov") == 0) return main_genomecov(argc-1, argv+1);
     else {

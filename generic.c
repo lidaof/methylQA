@@ -171,6 +171,7 @@ long long plotInsertsize(struct slInt *slPair, char *prefix){
     if(system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpifile);
+    unlink(tmpRfile);
     return sum;
 }
 
@@ -241,6 +242,7 @@ long long * plotcpgCount(struct slInt *Count, char *prefix){
     asprintf(&command, "Rscript %s", tmpRfile);
     if(system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile);
     return cnt;
 }
 
@@ -305,6 +307,7 @@ int * plotcpgCov(struct hash *cpgHash, char *prefix){
     asprintf(&command, "Rscript %s", tmpRfile);
     if(system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile);
     return cnt;
 }
 
@@ -367,6 +370,7 @@ void plotGenomeCov(struct hash *cov, char *prefix){
     asprintf(&command, "Rscript %s", tmpRfile);
     if(system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile);
 }
 
 void plotMappingStat(unsigned long long int *cnt, char *prefix){
@@ -391,6 +395,7 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix){
     asprintf(&command, "Rscript %s", tmpRfile);
     if(system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile);
 }
 
 unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHash, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat) {
@@ -1017,6 +1022,36 @@ struct hash *cpgBed2BinKeeperHash (struct hash *chrHash, char *cpgbedfile){
     return hash;
 }
 
+long long * bedCpGstat(struct hash *cpgHash, char *bedfile){
+    char *row[20], *line;
+    int start, end;
+    long long *cnt = malloc(sizeof(long long)*2);
+    long long c1 = 0, c2 = 0;
+    struct lineFile *stream = lineFileOpen2(bedfile, TRUE);
+    while ( lineFileNextReal(stream, &line)){
+        int numFields = chopByWhite(line, row, ArraySize(row));
+        if (numFields < 4)
+            errAbort("file %s doesn't appear to be in bed format. At least 3 fields required, got %d", bedfile, numFields);
+        start = (int) strtol(row[1], NULL, 0);
+        end = (int) strtol(row[2], NULL, 0);
+        //output insert size
+        c1 += (long long)(end - start);
+        //do cpg stat
+        struct hashEl *hel5 = hashLookup(cpgHash, row[0]);
+        if (hel5 == NULL)
+            continue;
+        struct binKeeper *bs5 = (struct binKeeper *) hel5->val;
+        int c = binKeeperCpGstat(bs5, start, end);
+        c2 += (long long) c;
+    }
+    lineFileClose(&stream);
+    //fprintf(stderr, "c1 : %lli", c1);
+    //fprintf(stderr, "c2 : %lli", c2);
+    cnt[0] = c1;
+    cnt[1] = c2;
+    return cnt;
+}
+
 unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char *outBed, int call, char *prefix){
     FILE *f  = mustOpen(outBed, "w");
     //if (strcmp(prefix, "NULL") != 0){
@@ -1224,8 +1259,11 @@ unsigned long long int CpGscorebedGraph(struct hash *hash, unsigned long long in
     return c;
 }
 
-void fragmentStats(struct hash *hash, unsigned long long int *cnt2, unsigned int mapQ, unsigned long long int *cnt, unsigned long long int cnt1, char *outfile, int minlen, int maxlen, int win){
-    FILE *f = mustOpen(outfile, "w");
+struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, unsigned int mapQ, unsigned long long int *cnt, unsigned long long int cnt1, char *output, int minlen, int maxlen, int win){
+    char *outReport;
+    if (asprintf(&outReport, "%s.CpG.report", output) < 0)
+        errAbort("Preparing output wrong");
+    FILE *f = mustOpen(outReport, "w");
     int highend = 0, lowend = 0, solosite = 0, soloreads = 0, pairsite = 0;
     struct slInt *fraglist = NULL, *frag;
     struct hashEl *hel, *hel2;
@@ -1303,6 +1341,19 @@ void fragmentStats(struct hash *hash, unsigned long long int *cnt2, unsigned int
             }
         }
     }
+    struct fragd *fragdistro = malloc(sizeof(struct fragd) * (bins + 3));
+    for (j=0; j<(bins+2); j++){
+        fragdistro[j].label = 0;
+        fragdistro[j].pct = 0;
+    }
+    //fragments distro plot
+    char tmpRfile2[50];
+    strcpy(tmpRfile2, template_name);
+    int fd2 = mkstemp(tmpRfile2);
+    if (fd2 == -1)
+        errAbort("create temp file error.");
+    FILE *fout2 = fdopen(fd2, "w");
+    fprintf(fout2, "dat <- data.frame(label=rep(NA, %d), total=rep(0, %d), cov=rep(0, %d), stringsAsFactors=FALSE)\n", bins+2, bins+2, bins+2);
     
     fprintf(f, "total reads (pair): %llu\n", cnt2[0]);
     fprintf(f, "    read ends 1: %llu\n", cnt2[0]);
@@ -1312,9 +1363,9 @@ void fragmentStats(struct hash *hash, unsigned long long int *cnt2, unsigned int
     fprintf(f, "    used read ends 1: %llu\n", cnt2[4]);
     fprintf(f, "    used read ends 2: %llu\n", cnt2[5]);
     //fprintf(f, "non-redundant reads (pair): %llu\n\n", cnt2[8]);
-    fprintf(f, "mappable reads (pair): %llu\n", cnt2[6]);
-    fprintf(f, "unique mapped reads (pair) (mapQ >= %u): %llu\n", mapQ, cnt2[7]);
-    fprintf(f, "mre filtered reads:\t%llu\n", cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
+    fprintf(f, "mapped reads (pair): %llu\n", cnt2[6]);
+    fprintf(f, "uniquely mapped reads (pair) (mapQ >= %u): %llu\n", mapQ, cnt2[7]);
+    fprintf(f, "MRE filtered reads:\t%llu\n", cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
     fprintf(f, "    CCGG reads:\t%llu\n", cnt[0]);
     fprintf(f, "    CCGC reads:\t%llu\n", cnt[1]);
     fprintf(f, "    GCGC reads:\t%llu\n", cnt[2]);
@@ -1327,15 +1378,93 @@ void fragmentStats(struct hash *hash, unsigned long long int *cnt2, unsigned int
     fprintf(f, "fragments:\t%i\n", pairsite);
     fprintf(f, "    reads in higher end of fragments:\t%i\n", highend);
     fprintf(f, "    reads in lower end of fragments:\t%i\n", lowend);
-    fprintf(f, "fragment size distribution:\n");
+    fprintf(f, "fragments size distribution:\n");
     fprintf(f, "%s\t%10s\t%10s\t%c\n", "Scale", "Count", "Percent", '|');
     fprintf(f, "<=%i\t%10d\t%10.2f\t|%s\n", minlen, histoMin, histoMin*100.0/pairsite, print_bar((int)(histoMin*100.0/pairsite)));
+    fprintf(fout2, "dat[%d, ] <- c('<=%i', %i, %.2f)\n", 1, minlen, histoMin, histoMin*100.0/pairsite);
+    fragdistro[0].label = minlen;
+    fragdistro[0].pct = histoMin*100.0/pairsite;
     for (j = 0; j < bins; j++){
         fprintf(f, "%i\t%10d\t%10.2f\t|%s\n", scale[j].e, scale[j].histo, scale[j].histo*100.0/pairsite, print_bar((int)(scale[j].histo*100.0/pairsite)));
+        fprintf(fout2, "dat[%d, ] <- c('%i', %i, %.2f)\n", j+2, scale[j].e, scale[j].histo, scale[j].histo*100.0/pairsite);
+        fragdistro[j+1].label = scale[j].e;
+        fragdistro[j+1].pct = scale[j].histo*100.0/pairsite;
     }
     fprintf(f, ">%i\t%10d\t%10.2f\t|%s\n", maxlen, histoMax, histoMax*100.0/pairsite, print_bar((int)(histoMax*100.0/pairsite)));
+    fprintf(fout2, "dat[%d, ] <- c('>%i', %i, %.2f)\n", j+2, maxlen, histoMax, histoMax*100.0/pairsite);
+    fragdistro[j+1].label = maxlen;
+    fragdistro[j+1].pct = histoMax*100.0/pairsite;
+    fragdistro[j+2].label = 999; //end mark
     
     carefulClose(&f);
+    fprintf(fout2, "dat$total <- as.numeric(dat$total)\n");
+    fprintf(fout2, "dat$cov <- as.numeric(dat$cov)\n");
+    fprintf(fout2, "pdf('%s.fragmentsizedistro.pdf')\n", output);
+    fprintf(fout2, "op <- par(mar = c(5,7,4,2) + 0.1)\n");
+    fprintf(fout2, "barplot(rev(dat$cov), names=rev(dat$label), main=\"MRE fragments size ditribution\", xlab=\"Percentage\", ylab=\"\", col=5, las=1, horiz=TRUE)\n");
+    fprintf(fout2, "title(ylab = \"Size range\", cex.lab = 1.5, line = 4.5)\n");
+    fprintf(fout2, "par(op)\n");
+    fprintf(fout2, "dev.off()\n");
+    fclose(fout2);
+
+    char *command2;
+    asprintf(&command2, "Rscript %s", tmpRfile2);
+    if(system(command2) == -1)
+        fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile2);
+    
+    //mre reads plot
+    char tmpRfile[50];
+    strcpy(tmpRfile, template_name);
+    int fd = mkstemp(tmpRfile);
+    if (fd == -1)
+        errAbort("create temp file error.");
+    FILE *fout = fdopen(fd, "w");
+    fprintf(fout, "dat <- data.frame(count=c(%llu, %llu, %llu, %llu, %llu, %llu), label=c('CCGG','CCGC','GCGC', 'ACGT', 'CGCG', 'Unkown'))\n", cnt[0], cnt[1], cnt[2], cnt[3], cnt[4], cnt[5]);
+    fprintf(fout, "dat$count <- as.numeric(dat$count)\n");
+    fprintf(fout, "pdf('%s.fragments.pdf')\n", output);
+    fprintf(fout, "op <- par(mar = c(7,8,4,2) + 0.1)\n");
+    fprintf(fout, "bar <- barplot(dat$count, las=1, col=2:7, ylab='',xlab='', main='MRE fragments stats')\n");
+    fprintf(fout, "title(ylab = 'Fragments count', cex.lab = 1.5, line = 4.5)\n");
+    fprintf(fout, "axis(1, at=bar, labels=dat$label, padj=1, tick=FALSE)\n");
+    fprintf(fout, "par(op)\n");
+    fprintf(fout, "dev.off()\n");
+    fclose(fout);
+
+    char *command;
+    asprintf(&command, "Rscript %s", tmpRfile);
+    if(system(command) == -1)
+        fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile);
+    
+    //mapping stats plot
+    char tmpRfile1[50];
+    strcpy(tmpRfile1, template_name);
+    int fd1 = mkstemp(tmpRfile1);
+    if (fd1 == -1)
+        errAbort("create temp file error.");
+    FILE *fout1 = fdopen(fd1, "w");
+    fprintf(fout1, "dat <- data.frame(count=c(%llu, %llu, %llu, %llu), label=c('total\\nfragments','mapped\\nfragments','uniquely\\nmapped\\nfragments', 'MRE\\nfiltered\\nfragments'))\n", cnt2[0], cnt2[6], cnt2[7], cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
+    fprintf(fout1, "dat$count <- as.numeric(dat$count)\n");
+    fprintf(fout1, "pdf('%s.mappingStat.pdf')\n", output);
+    fprintf(fout1, "op <- par(mar = c(7,8,4,2) + 0.1)\n");
+    fprintf(fout1, "bar <- barplot(dat$count, las=1, col=2:5, ylab='',xlab='', main='Mapping stats')\n");
+    fprintf(fout1, "title(ylab = 'Fragments count', cex.lab = 1.5, line = 4.5)\n");
+    fprintf(fout1, "axis(1, at=bar, labels=dat$label, padj=1, tick=FALSE)\n");
+    fprintf(fout1, "par(op)\n");
+    fprintf(fout1, "dev.off()\n");
+    fclose(fout1);
+
+    char *command1;
+    asprintf(&command1, "Rscript %s", tmpRfile1);
+    if(system(command1) == -1)
+        fprintf(stderr, "failed to call R for plotting");
+    unlink(tmpRfile1);
+
+    //for (j=0; j<(bins+2); j++){
+    //    fprintf(stderr, "j:%d,label:%d,pct:%.2f\n",j,fragdistro[j].label,fragdistro[j].pct);
+    //}
+    return fragdistro;
 }
 
 char *print_bar(int x){
@@ -1438,7 +1567,7 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     fprintf(f, "\\begin{document}\n");
     fprintf(f, "\n");
     fprintf(f, "\\title{%s Report}\n", texTitleEscape(prefix));
-    fprintf(f, "\\author{methylQA\\footnote{Website: \\url{http://epigenome.wustl.edu/methylQA/}} \\ version\\ %s}\n", methylQA_VERSION);
+    fprintf(f, "\\author{methylQA\\footnote{Website: \\url{http://methylQA.sourceforge.net/}} \\ version\\ %s}\n", methylQA_VERSION);
     fprintf(f, "\\date{\\today}\n");
     fprintf(f, "\\maketitle\n");
     fprintf(f, "\\pagenumbering{roman}\n");
@@ -1544,9 +1673,125 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     carefulClose(&f);
 }
 
+void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long int *cnt, unsigned long long int cnt1, struct hash *chrHash, struct hash *cpgHash, long long *cnt3, struct fragd *fragdistro){
+    char *outfile;
+    if (asprintf(&outfile, "%s.tex", prefix) < 0)
+        errAbort("Preparing output wrong");
+    FILE *f = mustOpen(outfile, "w");
+    fprintf(f, "\\documentclass[12pt]{article}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\usepackage{fullpage}\n");
+    fprintf(f, "\\usepackage{amsfonts}\n");
+    fprintf(f, "\\usepackage{graphicx}\n");
+    fprintf(f, "\\usepackage{hyperref}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\begin{document}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\title{%s Report}\n", texTitleEscape(prefix));
+    fprintf(f, "\\author{methylQA\\footnote{Website: \\url{http://methylQA.sourceforge.net/}} \\ version\\ %s}\n", methylQA_VERSION);
+    fprintf(f, "\\date{\\today}\n");
+    fprintf(f, "\\maketitle\n");
+    fprintf(f, "\\pagenumbering{roman}\n");
+    fprintf(f, "\\tableofcontents\n");
+    fprintf(f, "\\clearpage\n");
+    fprintf(f, "\\setcounter{page}{1}\n");
+    fprintf(f, "\\pagenumbering{arabic}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\section{Mapping status}\n");
+    fprintf(f, "\\begin{center}\n");
+    fprintf(f, "\\begin{tabular}{|c|c|}\n");
+    fprintf(f, "\\hline\n");
+    fprintf(f, "total fragments & %llu \\\\ \\hline\n", cnt2[0]);
+    fprintf(f, "mapped fragmentss & %llu \\\\ \\hline\n", cnt2[6]);
+    fprintf(f, "uniquely mapped fragments & %llu \\\\ \\hline\n", cnt2[7]);
+    fprintf(f, "MRE filtered fragments & %llu \\\\ \\hline\n", cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
+    fprintf(f, "\\end{tabular}\n");
+    fprintf(f, "\\end{center}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\begin{center}\n");
+    fprintf(f, "\\includegraphics[width=6.5in]{{%s.mappingStat}.pdf}\n", prefix);
+    fprintf(f, "\\end{center}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\section{MRE fragemets stats}\n");
+    fprintf(f, "\\subsection{Distribution by enzyme cut site}\n");
+    fprintf(f, "\\begin{center}\n");
+    fprintf(f, "\\begin{tabular}{|c|c|}\n");
+    fprintf(f, "\\hline\n");
+    fprintf(f, " Cut site & Count \\\\ \\hline\n");
+    fprintf(f, " CCGG & %llu \\\\ \\hline\n", cnt[0]);
+    fprintf(f, " CCGC & %llu \\\\ \\hline\n", cnt[1]);
+    fprintf(f, " GCGC & %llu \\\\ \\hline\n", cnt[2]);
+    fprintf(f, " ACGT & %llu \\\\ \\hline\n", cnt[3]);
+    fprintf(f, " CGCG & %llu \\\\ \\hline\n", cnt[4]);
+    fprintf(f, " Unkown & %llu \\\\ \\hline\n", cnt[5]);
+    fprintf(f, "\\end{tabular}\n");
+    fprintf(f, "\\end{center}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\begin{center}\n");
+    fprintf(f, "\\includegraphics[width=6.5in]{{%s.fragments}.pdf}\n", prefix);
+    fprintf(f, "\\end{center}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\subsection{Distribution by fragment size}\n");
+    fprintf(f, "\\begin{center}\n");
+    fprintf(f, "\\begin{tabular}{|c|c|}\n");
+    fprintf(f, "\\hline\n");
+    fprintf(f, "Range & Percentage \\\\ \\hline\n");
+    //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
+    int i, size=0;
+    for (i = 0;;i++){
+        if (fragdistro[i].label == 999){
+            break;
+        }
+        size++;
+    }
+    char sym[20];
+    for(i=0;i<size;i++){
+        if (i == 0){
+            strcpy(sym, "$ \\le $");
+        }else if (i == (size - 1)){
+            strcpy(sym, "\\textgreater");
+        }else{
+            strcpy(sym, " ");
+        }
+        fprintf(f, "%s%i & %.2f\\%% \\\\ \\hline\n", sym, fragdistro[i].label, fragdistro[i].pct);
+    }
+    fprintf(f, "\\end{tabular}\n");
+    fprintf(f, "\\end{center}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\begin{center}\n");
+    fprintf(f, "\\includegraphics[width=6.5in]{{%s.fragmentsizedistro}.pdf}\n", prefix);
+    fprintf(f, "\\end{center}\n");
+    fprintf(f, "\\section{Sampled CpG sites}\n");
+    fprintf(f, "Total \\begin{Huge}%llu\\end{Huge} CpG sites have been sampled in this dataset.\n", cnt1);
+    fprintf(f, "\n");
+    long long cpgnum = 0;
+    struct hashEl *hel;
+    struct hashCookie cookie = hashFirst(cpgHash);
+    while ( (hel = hashNext(&cookie)) != NULL ) {
+        struct binKeeper *bk = (struct binKeeper *) hel->val;
+        struct binKeeperCookie becookie = binKeeperFirst(bk);
+        struct binElement *be;
+        while( (be = binKeeperNext(&becookie)) != NULL ){
+            cpgnum += 1;
+        }
+        binKeeperFree(&bk);
+    }
+    long long genomebase = hashIntSum(chrHash);
+    double frac = ((double)cnt3[1] / (double)cnt3[0]) / ((double)cpgnum / (double)genomebase);
+    fprintf(f, "\\section{CpG enrichment}\n");
+    fprintf(f, "\\begin{eqnarray*}\n");
+    fprintf(f, "CpG\\ enrichment &= \\frac{CpG\\ count\\ in\\ fragments\\Big/total\\ base\\ of\\ fragments}{CpG\\ count\\ in\\ genome\\Big/total\\ base\\ of\\ genome} \\\\ \n");
+    fprintf(f, "&= \\frac{%lli\\Big/%lli}{%lli\\Big/%lli} \\\\ \n", cnt3[1], cnt3[0], cpgnum, genomebase);
+    fprintf(f, "&= \\textbf{%.2f}\n", frac);
+    fprintf(f, "\\end{eqnarray*}\n");
+    fprintf(f, "\n");
+    fprintf(f, "\\end{document}\n");
+    carefulClose(&f);
+}
+
 void tex2pdf(char *prefix){
     char *command;
-    asprintf(&command, "pdflatex %s", prefix);
+    asprintf(&command, "pdflatex %s >/dev/null 2>&1", prefix);
     if(system(command) == -1)
         fprintf(stderr, "failed to call pdflatex for generating PDF report.");
     if(system(command) == -1) //when there is toc, twice pdflatex needed
@@ -1561,8 +1806,8 @@ void tex2pdf(char *prefix){
         errAbort("Preparing output wrong");
     if (asprintf(&tf4, "%s.tex", prefix) < 0)
         errAbort("Preparing output wrong");
-    //unlink(tf1);
-    //unlink(tf2);
-    //unlink(tf3);
-    //unlink(tf4);
+    unlink(tf1);
+    unlink(tf2);
+    unlink(tf3);
+    unlink(tf4);
 }

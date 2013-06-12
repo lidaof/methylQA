@@ -2,7 +2,7 @@
 
 int cpg_usage(){
     //fprintf(stderr, "\n");
-    fprintf(stderr, "Usage:   methylQA cpg [options] <chromosome size file> <MRE fragment file> <bam/sam alignment file>\n\n");
+    fprintf(stderr, "Usage:   methylQA mre [options] <chromosome size file> <MRE fragment file> <bam/sam alignment file>\n\n");
     fprintf(stderr, "Generating MRE CpG density.\n\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
     fprintf(stderr, "         -Q       unique reads mapping Quality threshold [10]\n");
@@ -11,6 +11,7 @@ int cpg_usage(){
     fprintf(stderr, "         -x       MRE fragment maximal length cutoff [500]\n");
     fprintf(stderr, "         -R       remove redundant reads [off]\n");
     fprintf(stderr, "         -T       treat 1 paired-end read as 2 single-end reads [off]\n");
+    fprintf(stderr, "         -m       specify a CpG bed file for calculating CpG stats [null]\n");
     fprintf(stderr, "         -D       discard if only one end mapped in a paired end reads [off]\n");
     fprintf(stderr, "         -C       Add 'chr' string as prefix of reference sequence [off]\n");
     //fprintf(stderr, "         -E       output each MRE enzyme reads [off]\n");
@@ -25,15 +26,16 @@ int cpg_usage(){
 /* main stat function */
 int main_cpg (int argc, char *argv[]) {
     
-    char *output, *outReport, *outbigWig, *outbedGraph, *outBed, *outFilterBed;
+    char *output, *outbigWig, *outbedGraph, *outBed, *outFilterBed;
     unsigned long long int *cnt2, *cnt, cnt1;
     int optSam = 0, c, optDup = 0, optaddChr = 0, optDis = 0, optTreat = 0, optMin = 50, optMax = 500, optCall = 1; //optEach = 0;
     unsigned int optQual = 10, optisize = 500;
-    char *optoutput = NULL;
+    char *optoutput = NULL, *optm = NULL;
     time_t start_time, end_time;
     struct hash *hash = newHash(0);
+    long long *cnt3;
     start_time = time(NULL);
-    while ((c = getopt(argc, argv, "SQ:c:n:x:RTDCo:I:h?")) >= 0) {
+    while ((c = getopt(argc, argv, "SQ:c:n:x:RTm:DCo:I:h?")) >= 0) {
         switch (c) {
             case 'S': optSam = 1; break;
             case 'Q': optQual = (unsigned int)strtol(optarg, 0, 0); break;
@@ -42,6 +44,7 @@ int main_cpg (int argc, char *argv[]) {
             case 'x': optMax = (int)strtol(optarg, 0, 0); break;
             case 'R': optDup = 1; break;
             case 'T': optTreat = 1; break;
+            case 'm': optm = strdup(optarg); break;
             case 'D': optDis = 1; break;
             case 'C': optaddChr = 1; break;
             //case 'E': optEach = 1; break;
@@ -67,8 +70,6 @@ int main_cpg (int argc, char *argv[]) {
     
     if(asprintf(&outbigWig, "%s.CpG.bigWig", output) < 0)
         errAbort("Mem Error.\n");
-    if (asprintf(&outReport, "%s.CpG.report", output) < 0)
-        errAbort("Preparing output wrong");
     if (asprintf(&outFilterBed, "%s.filter.bed", output) < 0)
         errAbort("Preparing output wrong");
     if (asprintf(&outBed, "%s.bed", output) < 0)
@@ -97,17 +98,27 @@ int main_cpg (int argc, char *argv[]) {
 
     //write report file
     fprintf(stderr, "* fragment stats and preparing report file\n");
-    fragmentStats(hash, cnt2, optQual, cnt, cnt1, outReport, 40, 400, 20);
+    struct fragd *fragdistro = fragmentStats(hash, cnt2, optQual, cnt, cnt1, output, 40, 400, 20);
     
     fprintf(stderr, "* Generating bigWig files\n");
     sortBedfile(outbedGraph);
     bigWigFileCreate(outbedGraph, chr_size_file, 256, 1024, 0, 1, outbigWig);
+
+    struct hash *cpgHash = newHash(0);
+    if (optm != NULL){
+        fprintf(stderr, "* CpG bed file %s provided, will calculate CpG stats\n", optm);
+        fprintf(stderr, "* Reading the CpG bed file\n");
+        cpgHash = cpgBed2BinKeeperHash(chrHash, optm);
+    }
+    fprintf(stderr, "* Calculating CpG stats over filtered bed\n");
+    cnt3 = bedCpGstat(cpgHash, outFilterBed);
+    genMRETex(output, cnt2, cnt, cnt1, chrHash, cpgHash, cnt3, fragdistro);
+    tex2pdf(output);
     
     //cleaning
     hashFree(&chrHash);
     hashFree(&hash);
     free(outbigWig);
-    free(outReport);
     free(outBed);
     free(outbedGraph);
     free(outFilterBed);
