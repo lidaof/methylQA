@@ -167,8 +167,9 @@ long long plotInsertsize(struct slInt *slPair, char *prefix){
     fclose(fout);
 
     char *command;
-    asprintf(&command, "Rscript %s", tmpRfile);
-    if(system(command) == -1)
+    if (asprintf(&command, "Rscript %s", tmpRfile) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpifile);
     unlink(tmpRfile);
@@ -239,8 +240,9 @@ long long * plotcpgCount(struct slInt *Count, char *prefix){
     fclose(fout);
 
     char *command;
-    asprintf(&command, "Rscript %s", tmpRfile);
-    if(system(command) == -1)
+    if (asprintf(&command, "Rscript %s", tmpRfile) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile);
     return cnt;
@@ -304,8 +306,9 @@ int * plotcpgCov(struct hash *cpgHash, char *prefix){
     fclose(fout);
 
     char *command;
-    asprintf(&command, "Rscript %s", tmpRfile);
-    if(system(command) == -1)
+    if (asprintf(&command, "Rscript %s", tmpRfile) < 0 )
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile);
     return cnt;
@@ -367,8 +370,9 @@ void plotGenomeCov(struct hash *cov, char *prefix){
     fclose(fout);
 
     char *command;
-    asprintf(&command, "Rscript %s", tmpRfile);
-    if(system(command) == -1)
+    if (asprintf(&command, "Rscript %s", tmpRfile) < 0 )
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile);
 }
@@ -392,8 +396,9 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix){
     fclose(fout);
 
     char *command;
-    asprintf(&command, "Rscript %s", tmpRfile);
-    if(system(command) == -1)
+    if (asprintf(&command, "Rscript %s", tmpRfile) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile);
 }
@@ -1408,8 +1413,9 @@ struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, uns
     fclose(fout2);
 
     char *command2;
-    asprintf(&command2, "Rscript %s", tmpRfile2);
-    if(system(command2) == -1)
+    if (asprintf(&command2, "Rscript %s", tmpRfile2) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command2) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile2);
     
@@ -1432,8 +1438,9 @@ struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, uns
     fclose(fout);
 
     char *command;
-    asprintf(&command, "Rscript %s", tmpRfile);
-    if(system(command) == -1)
+    if (asprintf(&command, "Rscript %s", tmpRfile) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile);
     
@@ -1456,8 +1463,9 @@ struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, uns
     fclose(fout1);
 
     char *command1;
-    asprintf(&command1, "Rscript %s", tmpRfile1);
-    if(system(command1) == -1)
+    if (asprintf(&command1, "Rscript %s", tmpRfile1) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command1) == -1)
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile1);
 
@@ -1791,10 +1799,11 @@ void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long in
 
 void tex2pdf(char *prefix){
     char *command;
-    asprintf(&command, "pdflatex %s >/dev/null 2>&1", prefix);
-    if(system(command) == -1)
+    if (asprintf(&command, "pdflatex %s >/dev/null 2>&1", prefix) < 0)
+        errAbort("Preparing command wrong");
+    if (system(command) == -1)
         fprintf(stderr, "failed to call pdflatex for generating PDF report.");
-    if(system(command) == -1) //when there is toc, twice pdflatex needed
+    if (system(command) == -1) //when there is toc, twice pdflatex needed
         fprintf(stderr, "failed to call pdflatex for generating PDF report.");
     //clean stuff
     char *tf1, *tf2, *tf3, *tf4;
