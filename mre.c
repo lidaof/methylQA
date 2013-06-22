@@ -102,7 +102,8 @@ int main_cpg (int argc, char *argv[]) {
     
     fprintf(stderr, "* Generating bigWig files\n");
     sortBedfile(outbedGraph);
-    bigWigFileCreate(outbedGraph, chr_size_file, 256, 1024, 0, 1, outbigWig);
+    //bigWigFileCreate(outbedGraph, chr_size_file, 256, 1024, 0, 1, outbigWig);
+    bedGraphToBigWig(outbedGraph, chr_size_file, outbigWig);
 
     struct hash *cpgHash = newHash(0);
     if (optm != NULL){

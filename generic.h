@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.0-r002"
+#define methylQA_VERSION "0.1.1-r012"
 
 struct mreFrag {
     char pair[100], chr[50];

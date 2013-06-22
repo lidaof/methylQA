@@ -1617,7 +1617,7 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     struct hashCookie cookie = hashFirst(cov);
     while ( (hel = hashNext(&cookie)) != NULL ) {
         struct gcov *g = (struct gcov *) hel->val;
-        fprintf(f, "%s & %i & %i & %.2f\\%% \\\\ \\hline\n", hel->name, g->total, g->cov, (((float)(g->cov))/(g->total)) * 100.0);
+        fprintf(f, "%s & %i & %i & %.2f\\%% \\\\ \\hline\n", texTitleEscape(hel->name), g->total, g->cov, (((float)(g->cov))/(g->total)) * 100.0);
         t1 += (long long)g->total;
         c1 += (long long)g->cov;
     }
@@ -1806,7 +1806,7 @@ void tex2pdf(char *prefix){
     if (system(command) == -1) //when there is toc, twice pdflatex needed
         fprintf(stderr, "failed to call pdflatex for generating PDF report.");
     //clean stuff
-    char *tf1, *tf2, *tf3, *tf4;
+    char *tf1, *tf2, *tf3, *tf4, *tf5;
     if (asprintf(&tf1, "%s.log", prefix) < 0)
         errAbort("Preparing output wrong");
     if (asprintf(&tf2, "%s.aux", prefix) < 0)
@@ -1815,8 +1815,11 @@ void tex2pdf(char *prefix){
         errAbort("Preparing output wrong");
     if (asprintf(&tf4, "%s.tex", prefix) < 0)
         errAbort("Preparing output wrong");
+    if (asprintf(&tf5, "%s.out", prefix) < 0)
+        errAbort("Preparing output wrong");
     unlink(tf1);
     unlink(tf2);
     unlink(tf3);
     unlink(tf4);
+    unlink(tf5);
 }

@@ -14,7 +14,10 @@
 #include "bPlusTree.h"
 #include "bbiFile.h"
 #include "bwgInternal.h"
+#include "bigWig.h"
 
+/* define unitSize to be a larger storage class if your counts
+ * are overflowing. */
 typedef unsigned int unitSize;
 
 #define MAXCOUNT (unitSize)~0
@@ -32,11 +35,12 @@ void writeSections(struct bbiChromUsage *usageList, struct lineFile *lf,
 	int itemsPerSlot, struct bbiBoundsArray *bounds, int sectionCount, FILE *f,
 	int resTryCount, int resScales[], int resSizes[], 
 	boolean doCompress, bits32 *retMaxSectionSize);
-struct bbiSummary *writeReducedOnceReturnReducedTwice(struct bbiChromUsage *usageList, 
-	struct lineFile *lf, bits32 initialReduction, bits32 initialReductionCount, 
+struct bbiSummary *bedGraphWriteReducedOnceReturnReducedTwice(struct bbiChromUsage *usageList, 
+	int fieldCount, struct lineFile *lf, bits32 initialReduction, bits32 initialReductionCount, 
 	int zoomIncrement, int blockSize, int itemsPerSlot, boolean doCompress,
 	struct lm *lm, FILE *f, bits64 *retDataStart, bits64 *retIndexStart,
 	struct bbiSummaryElement *totalSum);
 void bedGraphToBigWig(char *inName, char *chromSizes, char *outName);
+
 void outputCounts(unitSize *counts, char *chrom, unsigned size, FILE *f);
 void bedItemOverlapCount(struct hash *chromHash, char *infile, char *outfile);
