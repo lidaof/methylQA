@@ -1,9 +1,9 @@
 #include "generic.h"
 
 int cpg_usage(){
-    //fprintf(stderr, "\n");
+    fprintf(stderr, "\nAnalyzing MRE-seq data, generate CpG density and reports.\n");
+    fprintf(stderr, "Please noticed that if reads mapped to the chromosomes which didn't existed in size file, this type of reads will be discarded.\n\n");
     fprintf(stderr, "Usage:   methylQA mre [options] <chromosome size file> <MRE fragment file> <bam/sam alignment file>\n\n");
-    fprintf(stderr, "Generating MRE CpG density.\n\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
     fprintf(stderr, "         -Q       unique reads mapping Quality threshold [10]\n");
     fprintf(stderr, "         -c       base calling from which base [1]\n");
@@ -79,11 +79,11 @@ int main_cpg (int argc, char *argv[]) {
 
     struct hash *chrHash = hashNameIntFile(chr_size_file);
     
-    fprintf(stderr, "* Start to parse the MRE fragments file\n");
+    fprintf(stderr, "* Parsing the MRE fragments file\n");
     hash = MREfrag2Hash(mre_frag_file, optMin, optMax);
     
     //sam file
-    fprintf(stderr, "* Start to parse the SAM/BAM file\n");
+    fprintf(stderr, "* Parsing the SAM/BAM file\n");
     cnt2 = sam2bed(sam_file, outBed, chrHash, optSam, optQual, optDup, optaddChr, optDis, optisize, 0, optTreat);
 
     fprintf(stderr, "* Filtering reads by MRE site\n");
@@ -97,7 +97,7 @@ int main_cpg (int argc, char *argv[]) {
     cnt1 = CpGscorebedGraph(hash, cnt, outbedGraph);
 
     //write report file
-    fprintf(stderr, "* fragment stats and preparing report file\n");
+    fprintf(stderr, "* Generating fragment stats and preparing report file\n");
     struct fragd *fragdistro = fragmentStats(hash, cnt2, optQual, cnt, cnt1, output, 40, 400, 20);
     
     fprintf(stderr, "* Generating bigWig files\n");
@@ -111,8 +111,8 @@ int main_cpg (int argc, char *argv[]) {
         fprintf(stderr, "* Reading the CpG bed file\n");
         cpgHash = cpgBed2BinKeeperHash(chrHash, optm);
     }
-    fprintf(stderr, "* Calculating CpG stats over filtered bed\n");
-    cnt3 = bedCpGstat(cpgHash, outFilterBed);
+    fprintf(stderr, "* Calculating CpG stats over uniquely aligned reads\n");
+    cnt3 = bedCpGstat(cpgHash, outBed);
     genMRETex(output, cnt2, cnt, cnt1, chrHash, cpgHash, cnt3, fragdistro);
     tex2pdf(output);
     

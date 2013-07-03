@@ -1,6 +1,6 @@
 CC=gcc
 COPT= -O -g
-CFLAGS= -Wall -Werror -Wformat -Wimplicit -Wreturn-type -Wuninitialized
+CFLAGS= -Wall -Werror -Wformat -Wimplicit -Wreturn-type -Wuninitialized -Wno-unused-but-set-variable -Wno-unused-result
 DFLAGS= -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -DCOLOR32
 
 %.o: %.c

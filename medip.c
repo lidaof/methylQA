@@ -1,9 +1,9 @@
 #include "generic.h"
 
 int medip_usage(){
-    //fprintf(stderr, "\n");
+    fprintf(stderr, "\nAnalyzing MeDIP-seq data, generating density and reports.\n");
+    fprintf(stderr, "Please noticed that if reads mapped to the chromosomes which didn't existed in size file, this type of reads will be discarded.\n\n");
     fprintf(stderr, "Usage:   methylQA medip [options] <chromosome size file> <bam/sam alignment file>\n\n");
-    fprintf(stderr, "\nPlease noticed that if reads mapped to the chromosomes which didn't existed in size file, this type of reads will be discarded.\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
     fprintf(stderr, "         -Q       unique reads mapping Quality threshold [10]\n");
     fprintf(stderr, "         -r       do NOT remove redundant reads [off]\n");

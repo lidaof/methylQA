@@ -1,8 +1,8 @@
 #include "generic.h"
 
 int density_usage(){
-    //fprintf(stderr, "\n");
-    fprintf(stderr, "\nWorks as ChipSeqHandler program.\nPlease noticed that if reads mapped to the chromosomes which didn't existed in size file, this type of reads will be discarded.\n");
+    fprintf(stderr, "\nAnalyzing ChIP-seq data, generating density and reports.\n");
+    fprintf(stderr, "Please noticed that if reads mapped to the chromosomes which didn't existed in size file, this type of reads will be discarded.\n\n");
     fprintf(stderr, "Usage:   methylQA density [options] <chromosome size file> <bam/sam alignment file>\n\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
     fprintf(stderr, "         -Q       unique reads mapping Quality threshold [10]\n");
