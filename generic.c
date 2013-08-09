@@ -1057,7 +1057,7 @@ long long * bedCpGstat(struct hash *cpgHash, char *bedfile){
     return cnt;
 }
 
-unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char *outBed, int call, char *prefix){
+unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char *outBed, int call, char *prefix, int guess){
     FILE *f  = mustOpen(outBed, "w");
     //if (strcmp(prefix, "NULL") != 0){
         char *out1 = malloc(200);
@@ -1088,7 +1088,9 @@ unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char
     char strand, *row[20], *line;
     struct lineFile *inBedStream = lineFileOpen2(inBed, TRUE);
     char key1[100]; //key2[100];
+    char key11[100]; //guess MRE site with read position 1 or 4
     int start, end, rstart, rend;
+    struct hashEl *hel;
     unsigned long long int CCGG = 0, CCGC = 0, GCGC = 0, ACGT = 0, CGCG = 0, unknown = 0;
     unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 6);
     while( lineFileNextReal(inBedStream, &line)){
@@ -1103,6 +1105,10 @@ unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char
             rend = end;
             if (sprintf(key1, "%s:%i:%c", row[0], rstart, '+') < 0)
                 errAbort("Mem ERROR");
+            if (guess){
+                if (sprintf(key11, "%s:%i:%c", row[0], rstart - 3, '+') < 0)
+                    errAbort("Mem ERROR");
+            }
             //if (sprintf(key2, "%s:%i:%c", bed->chrom, bed->chromStart - 3, '+') < 0)
             //    errAbort("Mem ERROR");
         } else {
@@ -1110,10 +1116,19 @@ unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char
             rend = end + call;
             if (sprintf(key1, "%s:%i:%c", row[0], rend, '-') < 0)
                 errAbort("Mem ERROR");
+            if (guess){
+                if (sprintf(key11, "%s:%i:%c", row[0], rend + 3, '-') < 0)
+                    errAbort("Mem ERROR");
+            }
             //if (sprintf(key2, "%s:%i:%c", bed->chrom, bed->chromEnd + 3, '-') < 0)
             //    errAbort("Mem ERROR");
         }
-        struct hashEl *hel = hashLookup(hash, key1);
+        hel = hashLookup(hash, key1);
+        if (hel == NULL){
+            if (guess){
+                hel = hashLookup(hash, key11);
+            }
+        }
         //struct hashEl *hel2 = hashLookup(hash, key2);
         if (hel != NULL) {
             //bedOutputN(bed, 6, f, '\t', '\n');

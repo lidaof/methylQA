@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.2 (r013)"
+#define methylQA_VERSION "0.1.3 (r014)"
 
 struct mreFrag {
     char pair[100], chr[50];
@@ -54,7 +54,7 @@ void sortBedfile(char *bedfile);
 void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int mapQ);
 unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHash, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat);
 struct hash *MREfrag2Hash (char *fragfile, int minlen, int maxlen);
-unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char *outBed, int call, char *prefix);
+unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char *outBed, int call, char *prefix, int guess);
 double calCpGscore (struct mreFrag *mre, unsigned long long int *cnt);
 unsigned long long int  CpGscorebedGraph(struct hash *hash, unsigned long long int *cnt, char *outfile);
 struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, unsigned int mapQ, unsigned long long int *cnt, unsigned long long int cnt1, char *outfile, int minlen, int maxlen, int win);

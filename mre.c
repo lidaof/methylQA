@@ -16,6 +16,7 @@ int cpg_usage(){
     fprintf(stderr, "         -C       Add 'chr' string as prefix of reference sequence [off]\n");
     //fprintf(stderr, "         -E       output each MRE enzyme reads [off]\n");
     fprintf(stderr, "         -I       Insert length threshold [500]\n");
+    fprintf(stderr, "         -g       guess MRE read start position, (will guess 1 or 4, only used for old NGS data)\n");
     fprintf(stderr, "         -o       output prefix [basename of input without extension]\n");
     fprintf(stderr, "         -h       help message\n");
     fprintf(stderr, "         -?       help message\n");
@@ -28,14 +29,14 @@ int main_cpg (int argc, char *argv[]) {
     
     char *output, *outbigWig, *outbedGraph, *outBed, *outFilterBed;
     unsigned long long int *cnt2, *cnt, cnt1;
-    int optSam = 0, c, optDup = 0, optaddChr = 0, optDis = 0, optTreat = 0, optMin = 50, optMax = 500, optCall = 1; //optEach = 0;
+    int optSam = 0, c, optDup = 0, optaddChr = 0, optDis = 0, optTreat = 0, optMin = 50, optMax = 500, optCall = 1, optguess = 0; //optEach = 0;
     unsigned int optQual = 10, optisize = 500;
     char *optoutput = NULL, *optm = NULL;
     time_t start_time, end_time;
     struct hash *hash = newHash(0);
     long long *cnt3;
     start_time = time(NULL);
-    while ((c = getopt(argc, argv, "SQ:c:n:x:RTm:DCo:I:h?")) >= 0) {
+    while ((c = getopt(argc, argv, "SQ:c:n:x:RTm:DCo:I:gh?")) >= 0) {
         switch (c) {
             case 'S': optSam = 1; break;
             case 'Q': optQual = (unsigned int)strtol(optarg, 0, 0); break;
@@ -49,6 +50,7 @@ int main_cpg (int argc, char *argv[]) {
             case 'C': optaddChr = 1; break;
             //case 'E': optEach = 1; break;
             case 'I': optisize = (unsigned int)strtol(optarg, 0, 0); break;
+            case 'g': optguess = 1; break;
             case 'o': optoutput = strdup(optarg); break;
             case 'h':
             case '?': return cpg_usage(); break;
@@ -66,6 +68,10 @@ int main_cpg (int argc, char *argv[]) {
         output = optoutput;
     } else {
         output = cloneString(get_filename_without_ext(basename(sam_file)));
+    }
+
+    if (optguess){
+        optCall = 1;
     }
     
     if(asprintf(&outbigWig, "%s.CpG.bigWig", output) < 0)
@@ -88,7 +94,7 @@ int main_cpg (int argc, char *argv[]) {
 
     fprintf(stderr, "* Filtering reads by MRE site\n");
     //if (optEach){
-        cnt = filterReadByMREsite(hash, outBed, outFilterBed, optCall - 1, output);
+        cnt = filterReadByMREsite(hash, outBed, outFilterBed, optCall - 1, output, optguess);
     //} else {
     //    cnt = filterReadByMREsite(hash, outBed, outFilterBed, optCall - 1, "NULL");
     //}

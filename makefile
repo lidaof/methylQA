@@ -26,6 +26,9 @@ $(KENTLIB):
 $(SAMLIB):
 	cd $(SAMTOOLS) && make lib
 
+cleanlocal:
+	rm -f $(MYF) $(O)
+
 clean:
 	wdir=`pwd`; \
 	cd $$wdir/$(KENT) && make clean; \
