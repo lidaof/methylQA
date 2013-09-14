@@ -9,6 +9,7 @@ static int usage() {
     fprintf(stderr, "         mre         generate CpG density for MRE-Seq data\n");
     fprintf(stderr, "         density     generate genome density for ChIP-Seq data\n");
     fprintf(stderr, "         genomecov   calculate genome coverage by reads using sorted bedGraph file\n");
+    fprintf(stderr, "         bismark     analysis bismark output\n");
     fprintf(stderr, "\n");
     return 1;
 }
@@ -19,6 +20,7 @@ int main(int argc, char *argv[]) {
     else if (strcmp(argv[1], "mre") == 0) return main_cpg(argc-1, argv+1);
     else if (strcmp(argv[1], "density") == 0) return main_density(argc-1, argv+1);
     else if (strcmp(argv[1], "genomecov") == 0) return main_genomecov(argc-1, argv+1);
+    else if (strcmp(argv[1], "bismark") == 0) return main_bismark(argc-1, argv+1);
     else {
         fprintf(stderr, "[methylQA] unrecognized command '%s'\n", argv[1]);
         return 1;
