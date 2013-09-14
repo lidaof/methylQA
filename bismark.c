@@ -43,7 +43,8 @@ int main_bismark (int argc, char *argv[]) {
     char *cpg_bed_file = argv[optind+1];
     char *sam_file = argv[optind+2];
 
-    fprintf(stderr, "CpG file provided: %s\n", cpg_bed_file);
+    fprintf(stderr, "* CpG file provided: %s\n", cpg_bed_file);
+    fprintf(stderr, "* Insert size cutoff: %u\n", optisize);
    
     struct hash *chrHash = hashNameIntFile(chr_size_file);
     cpgHash = cpgBed2BinKeeperHashBismark(chrHash, cpg_bed_file);
