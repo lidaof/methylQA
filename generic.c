@@ -497,7 +497,6 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
     char chr[100], key[100], strand, read_cove[4], genome_cove[4], methycall[1000], *row[100];
     int fi, start, fstart, fend, fstrand, left, right, distance=0, cutoff = 0; //cutoff used for remove PCR duplication, single end as 1, paired end as 2
     unsigned long linecnt = 0, dupCount = 0, failCount = 0;
-    struct hash *dup = newHash(0);
     //process sam/bam list
     int numFields = chopByChar(samfile, ',', row, ArraySize(row));
     for(fi = 0; fi < numFields; fi++){
@@ -505,6 +504,7 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
         samfile_t *samfp;
         bam1_t *b;
         bam_header_t *h;
+        struct hash *dup = newHash(0);
         if (isSam) {
             if ( (samfp = samopen(row[fi], "r", 0)) == 0) {
                 fprintf(stderr, "Fail to open SAM file %s\n", samfile);
@@ -629,11 +629,11 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
         samclose(samfp);
         bam_destroy1(b);
         //bam_header_destroy(h);
+        freeHash(&dup);
     }
     fprintf(stderr, "\r* Processed lines: %lu\n", linecnt);
     fprintf(stderr, "* Quality Failed alignments: %lu\n", failCount);
     fprintf(stderr, "* Duplicated alignments: %lu\n", dupCount);
-    freeHash(&dup);
 }
 
 unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHash, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat) {
