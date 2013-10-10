@@ -1,6 +1,6 @@
 CC=gcc
 COPT= -O -g
-CFLAGS= -Wall -Werror -Wformat -Wimplicit -Wreturn-type -Wuninitialized
+CFLAGS= -Wall -Werror -Wformat -Wimplicit -Wreturn-type -Wuninitialized -Werror=unused-but-set-variable
 DFLAGS= -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE
 KENT=cuskent
 SAMTOOLS=cussamtools

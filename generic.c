@@ -578,7 +578,8 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
     */
     char chr[100], strand, read_cove[4], genome_cove[4], methycall[1000], *row[100];
     //char key[100];
-    int fi, start, fstart, fend, fstrand, left, right, distance=0, cutoff = 0; //cutoff used for remove PCR duplication, single end as 1, paired end as 2
+    int fi, start, left, right, distance=0; //cutoff used for remove PCR duplication, single end as 1, paired end as 2
+    //int fstart, fend, fstrand, cutoff = 0;
     unsigned long long int linecnt = 0, dupCount = 0, failCount = 0, totalbase = 0;
     unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 12);
     unsigned long long int *methyCnt = malloc(sizeof(unsigned long long int) * 8);
@@ -633,31 +634,31 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
             }
             if ( (b->core.flag == 0) || (b->core.flag == 16)){
                 //single end
-                cutoff = 1;
+                //cutoff = 1;
                 start = (int) b->core.pos;
-                fend = (int) b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
-                fstart = start;
-                fstrand = strand;
+                //fend = (int) b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
+                //fstart = start;
+                //fstrand = strand;
                 left = 0;
                 right = b->core.l_qseq;
             }else if((b->core.flag ==99) || (b->core.flag == 147) || (b->core.flag == 83) || (b->core.flag == 163) || (b->core.flag == 67) || (b->core.flag == 131) || (b->core.flag == 115) || (b->core.flag == 179) ){
                 // paired end, both new and old flag
-                cutoff = 2;
-                if (strand == '+'){
-                    fstart = (int) b->core.pos;
-                }else{
-                    fstart = (int) b->core.mpos;
-                }
+                //cutoff = 2;
+                //if (strand == '+'){
+                //    fstart = (int) b->core.pos;
+                //}else{
+                //    fstart = (int) b->core.mpos;
+                //}
                 start = (int) b->core.pos;
-                fend = (int) fstart + abs(b->core.isize);
+                //fend = (int) fstart + abs(b->core.isize);
                 if( (b->core.flag == 99) || (b->core.flag == 83) || (b->core.flag == 67) || (b->core.flag == 115)) {
                     //first pair
                     left = 0;
                     right = b->core.l_qseq;
                     if (strand == '+'){
-                        fstrand = '+';
+                        //fstrand = '+';
                     }else{
-                        fstrand = '-';
+                        //fstrand = '-';
                     }
                 }else{
                     //second pair
@@ -676,11 +677,11 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
                     if (strand == '+'){
                         left = 0;
                         right = min(distance, b->core.l_qseq); //might not overlap
-                        fstrand = '-';
+                        //fstrand = '-';
                     } else {
                         right = b->core.l_qseq;
                         left = max(0, b->core.l_qseq - distance); //might not overlap
-                        fstrand = '+';
+                        //fstrand = '+';
                     }
                 }
             } else {
