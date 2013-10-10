@@ -144,6 +144,36 @@ void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int
     carefulClose(&f);
 }
 
+void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, int numFields, char *row[100]){
+    FILE *f = mustOpen(outfile, "w");
+    int i;
+    fprintf(f, "files provided: %i\n", numFields);
+    for(i = 0; i < numFields; i++) fprintf(f, "  %s\n", row[i]);
+    fprintf(f, "\n");
+    fprintf(f, "uniquely mappable reads (pair): %llu\n", cnt[0]);
+    fprintf(f, "quality failed uniquely mapped reads (pair): %llu\n", cnt[1]);
+    //fprintf(f, "duplicated mapped reads (pair) (per lane based): %llu\n", cnt[2]);
+    fprintf(f, "total base of uniquely mapped reads (pair): %llu\n", cnt[3]);
+    fprintf(f, "\n");
+    fprintf(f, "in all uniquely mapped reads (pair), found:\n");
+    fprintf(f, "    number of methylated C in CHG context (was protected): %llu\n", cnt[4]);            // X for 
+    fprintf(f, "    number of not methylated C in CHG context (was converted): %llu\n", cnt[5]);        // x for 
+    fprintf(f, "    number of methylated C in CHH context (was protected): %llu\n", cnt[6]);            // H for 
+    fprintf(f, "    number of not methylated C in CHH context (was converted): %llu\n", cnt[7]);        // h for 
+    fprintf(f, "    number of methylated C in CpG context (was protected): %llu\n", cnt[8]);            // Z for 
+    fprintf(f, "    number of not methylated C in CpG context (was converted): %llu\n", cnt[9]);        // z for 
+    fprintf(f, "    number of methylated C in Unknown context (was protected): %llu\n", cnt[10]);        // U for 
+    fprintf(f, "    number of not methylated C in Unknown context (was converted): %llu\n", cnt[11]);    // u for 
+    fprintf(f, "\n");
+    fprintf(f, "in the total %i CpG Cytosine:\n", cnt2[19]);
+    fprintf(f, "    %15s\t%10s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
+    for(i = 0; i < 18; i++){
+        fprintf(f, "    %15s\t%10d\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
+    }
+    fprintf(f, "    %15s\t%10d\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
+    carefulClose(&f);
+}
+
 long long writeInsertsize(struct slInt *slPair, char *outfile){
     struct slInt *c;
     long long sum = 0;
@@ -342,26 +372,62 @@ void writecpgCov(struct hash *cpgHash, char *outfile){
     carefulClose(&f);
 }
 
-void writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg){
+int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly){
+    int *cnt = malloc(sizeof(int)*20);
+    int i, j, tot=0; //tot will be the 20th element, which was not the coverage count, was the total C (in CpG) count
+    for(i=0;i<20;i++)
+        cnt[i] = 0;
     struct hashEl *hel;
     struct hashCookie cookie = hashFirst(cpgHash);
-    FILE *f = mustOpen(outfile, "w");
-    FILE *f2 = mustOpen(outcpg, "w");
+    FILE *f = NULL, *f2 = NULL;
+    if(!statsOnly) {
+        f = mustOpen(outfile, "w");
+        f2 = mustOpen(outcpg, "w");
+    }
     while ( (hel = hashNext(&cookie)) != NULL ) {
         struct binKeeper *bk = (struct binKeeper *) hel->val;
         struct binKeeperCookie becookie = binKeeperFirst(bk);
         struct binElement *be;
         while( (be = binKeeperNext(&becookie)) != NULL ){
+            tot++;
             struct cpgC *oc = (struct cpgC *) be->val;
             if (oc->mc > 0 || oc->umc > 0){
-                fprintf(f, "%s\t%i\t%i\t%i\n", hel->name, be->start, be->end, (oc->mc + oc->umc));
-                fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/(oc->mc + oc->umc));
+                j = oc->mc + oc->umc;
+                if(!statsOnly) {
+                    fprintf(f, "%s\t%i\t%i\t%i\n", hel->name, be->start, be->end, j);
+                    fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                }
+                //if (j == 0) cnt[0] ++;
+                if (j == 1) cnt[1]++;
+                else if (j == 2) cnt[2]++;
+                else if (j == 3) cnt[3]++;
+                else if (j == 4) cnt[4]++;
+                else if (j == 5) cnt[5]++;
+                else if (j == 6) cnt[6]++;
+                else if (j == 7) cnt[7]++;
+                else if (j == 8) cnt[8]++;
+                else if (j == 9) cnt[9]++;
+                else if (j == 10) cnt[10]++;
+                else if (j >=11 && j <= 20) cnt[11]++;
+                else if (j >=21 && j <= 30) cnt[12]++;
+                else if (j >=31 && j <= 40) cnt[13]++;
+                else if (j >=41 && j <= 50) cnt[14]++;
+                else if (j >=51 && j <= 100) cnt[15]++;
+                else if (j >=101 && j <= 200) cnt[16]++;
+                else if (j >=201 && j <= 300) cnt[17]++;
+                else cnt[18]++; // j >=301
+            } else {
+                cnt[0]++; 
             }
         }
         binKeeperFree(&bk);
     }
-    carefulClose(&f2);
-    carefulClose(&f);
+    cnt[19] = tot;
+    if(!statsOnly) {
+        carefulClose(&f2);
+        carefulClose(&f);
+    }
+    return cnt;
 }
 
 void writeGenomeCov(struct hash *cov, char *outfile){
@@ -436,7 +502,7 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix){
     unlink(tmpRfile);
 }
 
-void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycall, int left, int right){
+void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycall, int left, int right, unsigned long long int *methyCnt){
     int i, j;
     struct binElement *hitList = NULL, *hit;
     struct hashEl *hel = hashLookup(cpgHash, chrom);
@@ -457,8 +523,10 @@ void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycal
                     struct cpgC *cg = (struct cpgC *) hit->val;
                     if (j == 'Z'){
                         (cg->mc)++;
-                    }else{
+                        methyCnt[4]++;
+                    }else if(j == 'z'){
                         (cg->umc)++;
+                        methyCnt[5]++;
                     }
                     //fprintf(stdout, "mC: %i umC: %i\n", cg->mc, cg->umc);
                     //break; // should be ok to comment out since just 1 CpG
@@ -467,11 +535,25 @@ void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycal
                 warn("not a CpG Cytosine found: %s %i %i", chrom, start+i, start+i+1);
                 continue;
             }
+        } else {
+            if(j == 'X'){
+                methyCnt[0]++;
+            }else if(j == 'x'){
+                methyCnt[1]++;
+            }else if(j == 'H'){
+                methyCnt[2]++;
+            }else if(j == 'h'){
+                methyCnt[3]++;
+            }else if(j == 'U'){
+                methyCnt[6]++;
+            }else if(j == 'u'){
+                methyCnt[7]++;
+            }
         }
     }
 }
 
-void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr) {
+unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr) {
     /*
   ### . for bases not involving cytosines                       ###
   ### X for methylated C in CHG context (was protected)         ###
@@ -494,9 +576,15 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
   TODO: currently works only for bismark with bowtie1
   FIXME: lack of process of CIGAR in order to support bowtie2
     */
-    char chr[100], key[100], strand, read_cove[4], genome_cove[4], methycall[1000], *row[100];
+    char chr[100], strand, read_cove[4], genome_cove[4], methycall[1000], *row[100];
+    //char key[100];
     int fi, start, fstart, fend, fstrand, left, right, distance=0, cutoff = 0; //cutoff used for remove PCR duplication, single end as 1, paired end as 2
-    unsigned long linecnt = 0, dupCount = 0, failCount = 0;
+    unsigned long long int linecnt = 0, dupCount = 0, failCount = 0, totalbase = 0;
+    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 12);
+    unsigned long long int *methyCnt = malloc(sizeof(unsigned long long int) * 8);
+    int i;
+    for(i = 0; i < 8; i++) cnt[i] = 0;
+    for(i = 0; i < 8; i++) methyCnt[i] = 0;
     //process sam/bam list
     int numFields = chopByChar(samfile, ',', row, ArraySize(row));
     for(fi = 0; fi < numFields; fi++){
@@ -520,8 +608,9 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
         b = bam_init1();
         while ( samread(samfp, b) >= 0) {
             linecnt++;
+            totalbase += b->core.l_qseq;
             if ((linecnt % 100000) == 0)
-                fprintf(stderr, "\r* Processed lines: %lu", linecnt);
+                fprintf(stderr, "\r* Processed lines: %llu", linecnt);
             //change chr name to chr1, chr2 ...
             strcpy(chr, h->target_name[b->core.tid]);
             if (addChr){
@@ -601,16 +690,16 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
             }
             //remove dup
             //if (sprintf(key, "%s:%i:%i:%c:%s:%s", chr, fstart, fend, strand, read_cove, genome_cove) < 0)
-            if (sprintf(key, "%s:%i:%i:%c", chr, fstart, fend, fstrand) < 0)
-                errAbort("Mem ERROR");
-            hashIncInt(dup, key);
+            //if (sprintf(key, "%s:%i:%i:%c", chr, fstart, fend, fstrand) < 0)
+            //    errAbort("Mem ERROR");
+            //hashIncInt(dup, key);
             //fprintf(stderr, "key %s added\n", key);
-            int judge = hashIntVal(dup, key);
+            //int judge = hashIntVal(dup, key);
             //fprintf(stderr, "judge %i cutoff %i\n", judge, cutoff);
-            if (judge > cutoff){
-                dupCount++;
-                continue;
-            }
+            //if (judge > cutoff){
+            //    dupCount++;
+            //    continue;
+            //}
             //process methylation call
             //if(strand == '+'){
             //    strcpy(methycall, bam_aux2Z(bam_aux_get(b, "XM")));
@@ -623,7 +712,7 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
              * just used the methylation string no matter strand even works, why? FIXME
             */
             strcpy(methycall, bam_aux2Z(bam_aux_get(b, "XM")));
-            assignCpGcount(cpgHash, chr, start, methycall, left, right);
+            assignCpGcount(cpgHash, chr, start, methycall, left, right, methyCnt);
             //fprintf(stdout, "%s\t%i\t%i\t%i\t%c\t%i\t%i\t%s\n", chr, start, fstart, fend, strand, left, right, methycall);
         }
         samclose(samfp);
@@ -631,9 +720,15 @@ void bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr)
         //bam_header_destroy(h);
         freeHash(&dup);
     }
-    fprintf(stderr, "\r* Processed lines: %lu\n", linecnt);
-    fprintf(stderr, "* Quality Failed alignments: %lu\n", failCount);
-    fprintf(stderr, "* Duplicated alignments: %lu\n", dupCount);
+    fprintf(stderr, "\r* Processed lines: %llu\n", linecnt);
+    fprintf(stderr, "* Quality Failed alignments: %llu\n", failCount);
+    //fprintf(stderr, "* Duplicated alignments: %lu\n", dupCount);
+    cnt[0] = linecnt;
+    cnt[1] = failCount;
+    cnt[2] = dupCount;
+    cnt[3] = totalbase;
+    for (i=4;i<12;i++) cnt[i] = methyCnt[i-4];
+    return cnt;
 }
 
 unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHash, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat) {
