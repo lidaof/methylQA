@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.4 (r025)"
+#define methylQA_VERSION "0.1.4 (r026)"
 
 struct mreFrag {
     char pair[100], chr[50];
@@ -57,7 +57,7 @@ struct lineFile *lineFileOpen2(char *fileName, bool zTerm);
 void plotMappingStat(unsigned long long int *cnt, char *prefix);
 void sortBedfile(char *bedfile);
 void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int mapQ);
-void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, int numFields, char *row[100]);
+void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, int numFields, char *row[100], int bisMode, long long genomeBase);
 void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycall, int left, int right, unsigned long long int *methyCnt);
 unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr); 
 unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHash, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat);

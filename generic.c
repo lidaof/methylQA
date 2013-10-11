@@ -144,33 +144,42 @@ void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int
     carefulClose(&f);
 }
 
-void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, int numFields, char *row[100]){
+void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, int numFields, char *row[100], int bisMode, long long genomeBase){
     FILE *f = mustOpen(outfile, "w");
     int i;
     fprintf(f, "files provided: %i\n", numFields);
     for(i = 0; i < numFields; i++) fprintf(f, "  %s\n", row[i]);
     fprintf(f, "\n");
     fprintf(f, "uniquely mappable reads (pair): %llu\n", cnt[0]);
-    fprintf(f, "quality failed uniquely mapped reads (pair): %llu\n", cnt[1]);
+    fprintf(f, "quality failed mapped reads (pair) in the bismark bam: %llu\n", cnt[1]);
     //fprintf(f, "duplicated mapped reads (pair) (per lane based): %llu\n", cnt[2]);
     fprintf(f, "total base of uniquely mapped reads (pair): %llu\n", cnt[3]);
+    fprintf(f, "total base of uniquely mapped reads (pair) cover genome base (%lli): %.1fX\n", genomeBase, cnt[3]*1.0/genomeBase);
     fprintf(f, "\n");
     fprintf(f, "in all uniquely mapped reads (pair), found:\n");
     fprintf(f, "    number of methylated C in CHG context (was protected): %llu\n", cnt[4]);            // X for 
     fprintf(f, "    number of not methylated C in CHG context (was converted): %llu\n", cnt[5]);        // x for 
+    fprintf(f, "        C->T convertion rate in CHG context: %.2f%%\n", cnt[5]*100.0/(cnt[5]+cnt[4]));
     fprintf(f, "    number of methylated C in CHH context (was protected): %llu\n", cnt[6]);            // H for 
     fprintf(f, "    number of not methylated C in CHH context (was converted): %llu\n", cnt[7]);        // h for 
+    fprintf(f, "        C->T convertion rate in CHH context: %.2f%%\n", cnt[7]*100.0/(cnt[7]+cnt[6]));
     fprintf(f, "    number of methylated C in CpG context (was protected): %llu\n", cnt[8]);            // Z for 
     fprintf(f, "    number of not methylated C in CpG context (was converted): %llu\n", cnt[9]);        // z for 
+    fprintf(f, "        C->T convertion rate in CpG context: %.2f%%\n", cnt[9]*100.0/(cnt[9]+cnt[8]));
     fprintf(f, "    number of methylated C in Unknown context (was protected): %llu\n", cnt[10]);        // U for 
     fprintf(f, "    number of not methylated C in Unknown context (was converted): %llu\n", cnt[11]);    // u for 
+    fprintf(f, "        C->T convertion rate in Unknown context: %.2f%%\n", cnt[11]*100.0/(cnt[11]+cnt[10]));
     fprintf(f, "\n");
-    fprintf(f, "in the total %i CpG Cytosine:\n", cnt2[19]);
-    fprintf(f, "    %15s\t%10s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
-    for(i = 0; i < 18; i++){
-        fprintf(f, "    %15s\t%10d\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
+    if (bisMode){
+        fprintf(f, "in the total %i CpG Cytosine:\n", cnt2[19]);
+    } else {
+        fprintf(f, "in the total %i CpG:\n", cnt2[19]);
     }
-    fprintf(f, "    %15s\t%10d\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
+    fprintf(f, "%15s\t%10s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
+    for(i = 0; i < 18; i++){
+        fprintf(f, "%15s\t%10d\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
+    }
+    fprintf(f, "%15s\t%10d\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
     carefulClose(&f);
 }
 

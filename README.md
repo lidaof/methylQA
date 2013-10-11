@@ -1,4 +1,4 @@
-# methylQA (Version: 0.1.3-r014)
+# methylQA (Version: 0.1.4 (r025))
 ## methylation sequence data quality assessment tool
 
 ### install
