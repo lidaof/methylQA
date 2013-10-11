@@ -22,7 +22,7 @@ int main_bismark (int argc, char *argv[]) {
     
     char *output, *outReportfile, *outCpGfile, *outbedGraphfile, *row[100], *samfilecopy;
     unsigned long long int *cnt;
-    int *cnt2;
+    unsigned long long int *cnt2;
     int optSam = 0, c, optaddChr = 0, optStats = 0, optBis = 0;
     unsigned int optisize = 500;
     char *optoutput = NULL;

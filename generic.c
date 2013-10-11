@@ -144,7 +144,7 @@ void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int
     carefulClose(&f);
 }
 
-void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, int numFields, char *row[100], int bisMode, long long genomeBase){
+void writeReportBismark(char *outfile, unsigned long long int *cnt, unsigned long long int *cnt2, int numFields, char *row[100], int bisMode, long long genomeBase){
     FILE *f = mustOpen(outfile, "w");
     int i;
     fprintf(f, "files provided: %i\n", numFields);
@@ -171,15 +171,15 @@ void writeReportBismark(char *outfile, unsigned long long int *cnt, int *cnt2, i
     fprintf(f, "        C->T convertion rate in Unknown context: %.2f%%\n", cnt[11]*100.0/(cnt[11]+cnt[10]));
     fprintf(f, "\n");
     if (bisMode){
-        fprintf(f, "in the total %i CpG Cytosine:\n", cnt2[19]);
+        fprintf(f, "in the total %llu CpG Cytosine:\n", cnt2[19]);
     } else {
-        fprintf(f, "in the total %i CpG:\n", cnt2[19]);
+        fprintf(f, "in the total %llu CpG:\n", cnt2[19]);
     }
-    fprintf(f, "%15s\t%10s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
+    fprintf(f, "%15s\t%15s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
     for(i = 0; i < 18; i++){
-        fprintf(f, "%15s\t%10d\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
+        fprintf(f, "%15s\t%15llu\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
     }
-    fprintf(f, "%15s\t%10d\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
+    fprintf(f, "%15s\t%15llu\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
     carefulClose(&f);
 }
 
@@ -381,9 +381,10 @@ void writecpgCov(struct hash *cpgHash, char *outfile){
     carefulClose(&f);
 }
 
-int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly){
-    int *cnt = malloc(sizeof(int)*20);
-    int i, j, tot=0; //tot will be the 20th element, which was not the coverage count, was the total C (in CpG) count
+unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly){
+    unsigned long long int *cnt = malloc(sizeof(unsigned long long int)*20);
+    int i, j = 0;
+    unsigned long long int tot=0; //tot will be the 20th element, which was not the coverage count, was the total C (in CpG) count
     for(i=0;i<20;i++)
         cnt[i] = 0;
     struct hashEl *hel;
