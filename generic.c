@@ -170,16 +170,18 @@ void writeReportBismark(char *outfile, unsigned long long int *cnt, unsigned lon
     fprintf(f, "    number of not methylated C in Unknown context (was converted): %llu\n", cnt[11]);    // u for 
     fprintf(f, "        C->T convertion rate in Unknown context: %.2f%%\n", cnt[11]*100.0/(cnt[11]+cnt[10]));
     fprintf(f, "\n");
-    if (bisMode){
-        fprintf(f, "in the total %llu CpG Cytosine:\n", cnt2[19]);
-    } else {
-        fprintf(f, "in the total %llu CpG:\n", cnt2[19]);
+    if (cnt2 != NULL){
+        if (bisMode){
+            fprintf(f, "in the total %llu CpG Cytosine:\n", cnt2[19]);
+        } else {
+            fprintf(f, "in the total %llu CpG:\n", cnt2[19]);
+        }
+        fprintf(f, "%15s\t%15s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
+        for(i = 0; i < 18; i++){
+            fprintf(f, "%15s\t%15llu\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
+        }
+        fprintf(f, "%15s\t%15llu\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
     }
-    fprintf(f, "%15s\t%15s\t%10s\t%c\n", "Times covered", "Count", "Percent", '|');
-    for(i = 0; i < 18; i++){
-        fprintf(f, "%15s\t%15llu\t%10.2f\t|%s\n", cpglabel[i], cnt2[i], cnt2[i]*100.0/cnt2[19], print_bar((int)(cnt2[i]*100.0/cnt2[19])));
-    }
-    fprintf(f, "%15s\t%15llu\t%10.2f\t|%s\n", ">300", cnt2[18], cnt2[18]*100.0/cnt2[19], print_bar((int)(cnt2[18]*100.0/cnt2[19])));
     carefulClose(&f);
 }
 
@@ -440,6 +442,33 @@ unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, cha
     return cnt;
 }
 
+void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilerev){
+    int j = 0;
+    struct hashEl *hel;
+    struct hashCookie cookie = hashFirst(cpgHash);
+    FILE *f = mustOpen(outfilefor, "w");
+    FILE *f2 = mustOpen(outfilerev, "w");
+    while ( (hel = hashNext(&cookie)) != NULL ) {
+        struct binKeeper *bk = (struct binKeeper *) hel->val;
+        struct binKeeperCookie becookie = binKeeperFirst(bk);
+        struct binElement *be;
+        while( (be = binKeeperNext(&becookie)) != NULL ){
+            struct cpgC *oc = (struct cpgC *) be->val;
+            if (oc->mc > 0 || oc->umc > 0){
+                j = oc->mc + oc->umc;
+                if (oc->strand == '+'){
+                    fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                }else{
+                    fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                    }
+            }
+        }
+        binKeeperFree(&bk);
+    }
+    carefulClose(&f);
+    carefulClose(&f2);
+}
+
 void writeGenomeCov(struct hash *cov, char *outfile){
     struct hashEl *hel;
     struct hashCookie cookie = hashFirst(cov);
@@ -512,9 +541,9 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix){
     unlink(tmpRfile);
 }
 
-void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycall, int left, int right, unsigned long long int *methyCnt){
+void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *chrom, int start, char *methycall, char strand, int left, int right, unsigned long long int *methyCnt, int fullMode){
     int i, j;
-    struct binElement *hitList = NULL, *hit;
+    struct binElement *hitList = NULL, *hit, *hitList2 = NULL, *hit2;
     struct hashEl *hel = hashLookup(cpgHash, chrom);
     if (hel == NULL){
         return;
@@ -548,12 +577,108 @@ void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycal
         } else {
             if(j == 'X'){
                 methyCnt[0]++;
+                if (fullMode){
+                    struct hashEl *hel2 = hashLookup(chgHash, chrom);
+                    if (hel2 != NULL) {
+                        struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
+                        hitList2 = binKeeperFind(bk2, start+i, start+i+1);
+                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                            (cg2->mc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 1;
+                        c->umc = 0;
+                        c->strand = strand;
+                        int size = hashIntValDefault(chrHash, chrom, 0);
+                        if (size == 0) {
+                            continue;
+                        }
+                        struct binKeeper *bk2 = binKeeperNew(0, size);
+                        binKeeperAdd(bk2, start+i, start+i+1, c);
+                        hashAdd(chgHash, chrom, bk2);
+                    }   
+                }
             }else if(j == 'x'){
                 methyCnt[1]++;
+                if (fullMode){
+                    struct hashEl *hel2 = hashLookup(chgHash, chrom);
+                    if (hel2 != NULL) {
+                        struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
+                        hitList2 = binKeeperFind(bk2, start+i, start+i+1);
+                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                            (cg2->umc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 0;
+                        c->umc = 1;
+                        c->strand = strand;
+                        int size = hashIntValDefault(chrHash, chrom, 0);
+                        if (size == 0) {
+                            continue;
+                        }
+                        struct binKeeper *bk2 = binKeeperNew(0, size);
+                        binKeeperAdd(bk2, start+i, start+i+1, c);
+                        hashAdd(chgHash, chrom, bk2);
+                    }   
+                }
             }else if(j == 'H'){
                 methyCnt[2]++;
+                if (fullMode){
+                    struct hashEl *hel2 = hashLookup(chhHash, chrom);
+                    if (hel2 != NULL) {
+                        struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
+                        hitList2 = binKeeperFind(bk2, start+i, start+i+1);
+                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                            (cg2->mc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 1;
+                        c->umc = 0;
+                        c->strand = strand;
+                        int size = hashIntValDefault(chrHash, chrom, 0);
+                        if (size == 0) {
+                            continue;
+                        }
+                        struct binKeeper *bk2 = binKeeperNew(0, size);
+                        binKeeperAdd(bk2, start+i, start+i+1, c);
+                        hashAdd(chhHash, chrom, bk2);
+                    }   
+                }
             }else if(j == 'h'){
                 methyCnt[3]++;
+                if (fullMode){
+                    struct hashEl *hel2 = hashLookup(chhHash, chrom);
+                    if (hel2 != NULL) {
+                        struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
+                        hitList2 = binKeeperFind(bk2, start+i, start+i+1);
+                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                            (cg2->umc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 0;
+                        c->umc = 1;
+                        c->strand = strand;
+                        int size = hashIntValDefault(chrHash, chrom, 0);
+                        if (size == 0) {
+                            continue;
+                        }
+                        struct binKeeper *bk2 = binKeeperNew(0, size);
+                        binKeeperAdd(bk2, start+i, start+i+1, c);
+                        hashAdd(chhHash, chrom, bk2);
+                    }   
+                }
             }else if(j == 'U'){
                 methyCnt[6]++;
             }else if(j == 'u'){
@@ -563,7 +688,7 @@ void assignCpGcount(struct hash *cpgHash, char *chrom, int start, char *methycal
     }
 }
 
-unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int isSam, int addChr) {
+unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *forwardread, char *reverseread, int isSam, int addChr, int fullMode) {
     /*
   ### . for bases not involving cytosines                       ###
   ### X for methylated C in CHG context (was protected)         ###
@@ -593,9 +718,14 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
     unsigned long long int linecnt = 0, dupCount = 0, failCount = 0, totalbase = 0;
     unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 12);
     unsigned long long int *methyCnt = malloc(sizeof(unsigned long long int) * 8);
+    FILE *forward_f = NULL, *reverse_f = NULL;
     int i;
     for(i = 0; i < 8; i++) cnt[i] = 0;
     for(i = 0; i < 8; i++) methyCnt[i] = 0;
+    if (fullMode){
+        forward_f = mustOpen(forwardread, "w");
+        reverse_f = mustOpen(reverseread, "w");
+    }
     //process sam/bam list
     int numFields = chopByChar(samfile, ',', row, ArraySize(row));
     for(fi = 0; fi < numFields; fi++){
@@ -651,6 +781,13 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
                 //fstrand = strand;
                 left = 0;
                 right = b->core.l_qseq;
+                if (fullMode){
+                    if (strand == '+'){
+                        fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                    }else{
+                        fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                    }
+                }
             }else if((b->core.flag ==99) || (b->core.flag == 147) || (b->core.flag == 83) || (b->core.flag == 163) || (b->core.flag == 67) || (b->core.flag == 131) || (b->core.flag == 115) || (b->core.flag == 179) ){
                 // paired end, both new and old flag
                 //cutoff = 2;
@@ -660,16 +797,23 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
                 //    fstart = (int) b->core.mpos;
                 //}
                 start = (int) b->core.pos;
+                if (fullMode){
+                    if (strand == '+'){
+                        fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                    }else{
+                        fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                    }
+                }
                 //fend = (int) fstart + abs(b->core.isize);
                 if( (b->core.flag == 99) || (b->core.flag == 83) || (b->core.flag == 67) || (b->core.flag == 115)) {
                     //first pair
                     left = 0;
                     right = b->core.l_qseq;
-                    if (strand == '+'){
+                    //if (strand == '+'){
                         //fstrand = '+';
-                    }else{
+                    //}else{
                         //fstrand = '-';
-                    }
+                    //}
                 }else{
                     //second pair
                     //need take care about the overlap of 1st pair
@@ -723,7 +867,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
              * just used the methylation string no matter strand even works, why? FIXME
             */
             strcpy(methycall, bam_aux2Z(bam_aux_get(b, "XM")));
-            assignCpGcount(cpgHash, chr, start, methycall, left, right, methyCnt);
+            assignCpGcount(chrHash, cpgHash, chgHash, chhHash, chr, start, methycall, strand, left, right, methyCnt, fullMode);
             //fprintf(stdout, "%s\t%i\t%i\t%i\t%c\t%i\t%i\t%s\n", chr, start, fstart, fend, strand, left, right, methycall);
         }
         samclose(samfp);
@@ -739,6 +883,10 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *cpgHash, int
     cnt[2] = dupCount;
     cnt[3] = totalbase;
     for (i=4;i<12;i++) cnt[i] = methyCnt[i-4];
+    if(fullMode){
+        carefulClose(&forward_f);
+        carefulClose(&reverse_f);
+    }
     return cnt;
 }
 
@@ -1350,6 +1498,7 @@ struct hash *cpgBed2BinKeeperHash (struct hash *chrHash, char *cpgbedfile){
         c->c = 0;
         c->mc = 0;
         c->umc = 0;
+        c->strand = '.';
         struct hashEl *hel = hashLookup(hash, row[0]);
         if (hel != NULL) {
             struct binKeeper *bk = (struct binKeeper *) hel->val;
@@ -1384,9 +1533,11 @@ struct hash *cpgBed2BinKeeperHashBismark (struct hash *chrHash, char *cpgbedfile
         c1->c = 0;
         c1->mc = 0;
         c1->umc = 0;
+        c1->strand = '+';
         c2->c = 0;
         c2->mc = 0;
         c2->umc = 0;
+        c2->strand = '-';
         struct hashEl *hel = hashLookup(hash, row[0]);
         if (hel != NULL) {
             struct binKeeper *bk = (struct binKeeper *) hel->val;
