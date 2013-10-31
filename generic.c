@@ -482,7 +482,8 @@ void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfi
         struct hashCookie cookie2 = hashFirst(hash2);
         while( (hel2 = hashNext(&cookie2)) != NULL ){
             struct cpgC *oc = (struct cpgC *) hel2->val;
-            if (oc->mc > 0 || oc->umc > 0){
+            //if (oc->mc > 0 || oc->umc > 0){
+            if (oc->mc > 0){
                 j = oc->mc + oc->umc;
                 k = (int)strtol(hel2->name, 0, 0);
                 if (oc->strand == '+'){
@@ -494,6 +495,7 @@ void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfi
                 }
             }
         }
+        hashFree(&hash2);
     }
     carefulClose(&f);
     carefulClose(&f2);
@@ -888,7 +890,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
   TODO: currently works only for bismark with bowtie1
   FIXME: lack of process of CIGAR in order to support bowtie2
     */
-    char chr[100], strand, read_cove[4], genome_cove[4], methycall[1000], *row[100];
+    char chr[100], strand, read_cove[4], genome_cove[4], methycall[1000], *row[100], cstrand;
     //char key[100];
     int fi, start, left, right, distance=0; //cutoff used for remove PCR duplication, single end as 1, paired end as 2
     //int fstart, fend, fstrand, cutoff = 0;
@@ -949,6 +951,8 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
             }else{
                 strand = '-';
             }
+            //read strand
+            cstrand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
             if ( (b->core.flag == 0) || (b->core.flag == 16)){
                 //single end
                 //cutoff = 1;
@@ -960,9 +964,11 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
                 right = b->core.l_qseq;
                 if (fullMode){
                     if (strand == '+'){
-                        fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        //fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), "N", b->core.qual, strand);
                     }else{
-                        fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        //fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), "N", b->core.qual, strand);
                     }
                 }
             }else if((b->core.flag ==99) || (b->core.flag == 147) || (b->core.flag == 83) || (b->core.flag == 163) || (b->core.flag == 67) || (b->core.flag == 131) || (b->core.flag == 115) || (b->core.flag == 179) ){
@@ -976,9 +982,11 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
                 start = (int) b->core.pos;
                 if (fullMode){
                     if (strand == '+'){
-                        fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        //fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        fprintf(forward_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), "N", b->core.qual, strand);
                     }else{
-                        fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        //fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), bam1_qname(b), b->core.qual, strand);
+                        fprintf(reverse_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start, start+(b->core.l_qseq), "N", b->core.qual, strand);
                     }
                 }
                 //fend = (int) fstart + abs(b->core.isize);
@@ -1044,7 +1052,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
              * just used the methylation string no matter strand even works, why? FIXME
             */
             strcpy(methycall, bam_aux2Z(bam_aux_get(b, "XM")));
-            assignCpGcount(chrHash, cpgHash, chgHash, chhHash, chr, start, methycall, strand, left, right, methyCnt, fullMode);
+            assignCpGcount(chrHash, cpgHash, chgHash, chhHash, chr, start, methycall, cstrand, left, right, methyCnt, fullMode);
             //fprintf(stdout, "%s\t%i\t%i\t%i\t%c\t%i\t%i\t%s\n", chr, start, fstart, fend, strand, left, right, methycall);
         }
         samclose(samfp);
