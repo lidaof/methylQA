@@ -458,9 +458,11 @@ void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilere
                 j = oc->mc + oc->umc;
                 if (oc->strand == '+'){
                     fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                    //fprintf(f, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
                 }else{
                     fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
-                    }
+                    //fprintf(f2, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                }
             }
         }
         binKeeperFree(&bk);
@@ -582,9 +584,18 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
                         hitList2 = binKeeperFind(bk2, start+i, start+i+1);
-                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
-                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
-                            (cg2->mc)++;
+                        if (hitList2 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 1;
+                            c->umc = 0;
+                            c->strand = strand;
+                            binKeeperAdd(bk2, start+i, start+i+1, c);
+                        }else{
+                            for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                                struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                                (cg2->mc)++;
+                            }
                         }
                     } else {
                         struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
@@ -599,7 +610,7 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                         struct binKeeper *bk2 = binKeeperNew(0, size);
                         binKeeperAdd(bk2, start+i, start+i+1, c);
                         hashAdd(chgHash, chrom, bk2);
-                    }   
+                    }
                 }
             }else if(j == 'x'){
                 methyCnt[1]++;
@@ -608,9 +619,18 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
                         hitList2 = binKeeperFind(bk2, start+i, start+i+1);
-                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
-                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
-                            (cg2->umc)++;
+                        if (hitList2 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 0;
+                            c->umc = 1;
+                            c->strand = strand;
+                            binKeeperAdd(bk2, start+i, start+i+1, c);
+                        }else{
+                            for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                                struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                                (cg2->umc)++;
+                            }
                         }
                     } else {
                         struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
@@ -634,9 +654,18 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
                         hitList2 = binKeeperFind(bk2, start+i, start+i+1);
-                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
-                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
-                            (cg2->mc)++;
+                        if (hitList2 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 1;
+                            c->umc = 0;
+                            c->strand = strand;
+                            binKeeperAdd(bk2, start+i, start+i+1, c);
+                        }else{
+                            for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                                struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                                (cg2->mc)++;
+                            }
                         }
                     } else {
                         struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
@@ -660,9 +689,18 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
                         hitList2 = binKeeperFind(bk2, start+i, start+i+1);
-                        for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
-                            struct cpgC *cg2 = (struct cpgC *) hit2->val;
-                            (cg2->umc)++;
+                        if (hitList2 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 0;
+                            c->umc = 1;
+                            c->strand = strand;
+                            binKeeperAdd(bk2, start+i, start+i+1, c);
+                        }else{
+                            for (hit2 = hitList2; hit2 !=NULL; hit2 = hit2->next) {
+                                struct cpgC *cg2 = (struct cpgC *) hit2->val;
+                                (cg2->umc)++;
+                            }
                         }
                     } else {
                         struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
@@ -750,7 +788,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
         while ( samread(samfp, b) >= 0) {
             linecnt++;
             totalbase += b->core.l_qseq;
-            if ((linecnt % 100000) == 0)
+            if ((linecnt % 10000) == 0)
                 fprintf(stderr, "\r* Processed lines: %llu", linecnt);
             //change chr name to chr1, chr2 ...
             strcpy(chr, h->target_name[b->core.tid]);
