@@ -471,6 +471,34 @@ void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilere
     carefulClose(&f2);
 }
 
+void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfilerev){
+    int j = 0, k;
+    struct hashEl *hel, *hel2;
+    struct hashCookie cookie = hashFirst(cpgHash);
+    FILE *f = mustOpen(outfilefor, "w");
+    FILE *f2 = mustOpen(outfilerev, "w");
+    while ( (hel = hashNext(&cookie)) != NULL ) {
+        struct hash *hash2 = (struct hash *) hel->val;
+        struct hashCookie cookie2 = hashFirst(hash2);
+        while( (hel2 = hashNext(&cookie2)) != NULL ){
+            struct cpgC *oc = (struct cpgC *) hel2->val;
+            if (oc->mc > 0 || oc->umc > 0){
+                j = oc->mc + oc->umc;
+                k = (int)strtol(hel2->name, 0, 0);
+                if (oc->strand == '+'){
+                    fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, k, k+1, (float)(oc->mc)/j);
+                    //fprintf(f, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                }else{
+                    fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, k, k+1, (float)(oc->mc)/j);
+                    //fprintf(f2, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                }
+            }
+        }
+    }
+    carefulClose(&f);
+    carefulClose(&f2);
+}
+
 void writeGenomeCov(struct hash *cov, char *outfile){
     struct hashEl *hel;
     struct hashCookie cookie = hashFirst(cov);
@@ -545,7 +573,8 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix){
 
 void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *chrom, int start, char *methycall, char strand, int left, int right, unsigned long long int *methyCnt, int fullMode){
     int i, j;
-    struct binElement *hitList = NULL, *hit, *hitList2 = NULL, *hit2;
+    char key[20];
+    struct binElement *hitList = NULL, *hit; // *hitList2 = NULL, *hit2;
     struct hashEl *hel = hashLookup(cpgHash, chrom);
     if (hel == NULL){
         return;
@@ -577,9 +606,12 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                 continue;
             }
         } else {
+            if(sprintf(key, "%i", start+i) < 0)
+                errAbort("Mem Error.\n");
             if(j == 'X'){
                 methyCnt[0]++;
                 if (fullMode){
+                    /*
                     struct hashEl *hel2 = hashLookup(chgHash, chrom);
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
@@ -611,10 +643,37 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                         binKeeperAdd(bk2, start+i, start+i+1, c);
                         hashAdd(chgHash, chrom, bk2);
                     }
+                    */
+                    struct hashEl *hel2 = hashLookup(chgHash, chrom);
+                    if (hel2 != NULL) {
+                        struct hash *hash2 = (struct hash *) hel2->val;
+                        struct hashEl *hel3 = hashLookup(hash2, key);
+                        if (hel3 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 1;
+                            c->umc = 0;
+                            c->strand = strand;
+                            hashAdd(hash2, key, c);
+                        }else{
+                            struct cpgC *cg2 = (struct cpgC *) hel3->val;
+                            (cg2->mc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 1;
+                        c->umc = 0;
+                        c->strand = strand;
+                        struct hash *hash = newHash(0);
+                        hashAdd(hash, key, c);
+                        hashAdd(chgHash, chrom, hash);
+                    }
                 }
             }else if(j == 'x'){
                 methyCnt[1]++;
                 if (fullMode){
+                    /*
                     struct hashEl *hel2 = hashLookup(chgHash, chrom);
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
@@ -645,11 +704,38 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                         struct binKeeper *bk2 = binKeeperNew(0, size);
                         binKeeperAdd(bk2, start+i, start+i+1, c);
                         hashAdd(chgHash, chrom, bk2);
-                    }   
+                    }
+                    */
+                    struct hashEl *hel2 = hashLookup(chgHash, chrom);
+                    if (hel2 != NULL) {
+                        struct hash *hash2 = (struct hash *) hel2->val;
+                        struct hashEl *hel3 = hashLookup(hash2, key);
+                        if (hel3 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 0;
+                            c->umc = 1;
+                            c->strand = strand;
+                            hashAdd(hash2, key, c);
+                        }else{
+                            struct cpgC *cg2 = (struct cpgC *) hel3->val;
+                            (cg2->umc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 0;
+                        c->umc = 1;
+                        c->strand = strand;
+                        struct hash *hash = newHash(0);
+                        hashAdd(hash, key, c);
+                        hashAdd(chgHash, chrom, hash);
+                    }
                 }
             }else if(j == 'H'){
                 methyCnt[2]++;
                 if (fullMode){
+                    /*
                     struct hashEl *hel2 = hashLookup(chhHash, chrom);
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
@@ -680,11 +766,38 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                         struct binKeeper *bk2 = binKeeperNew(0, size);
                         binKeeperAdd(bk2, start+i, start+i+1, c);
                         hashAdd(chhHash, chrom, bk2);
-                    }   
+                    }
+                    */
+                    struct hashEl *hel2 = hashLookup(chhHash, chrom);
+                    if (hel2 != NULL) {
+                        struct hash *hash2 = (struct hash *) hel2->val;
+                        struct hashEl *hel3 = hashLookup(hash2, key);
+                        if (hel3 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 1;
+                            c->umc = 0;
+                            c->strand = strand;
+                            hashAdd(hash2, key, c);
+                        }else{
+                            struct cpgC *cg2 = (struct cpgC *) hel3->val;
+                            (cg2->mc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 1;
+                        c->umc = 0;
+                        c->strand = strand;
+                        struct hash *hash = newHash(0);
+                        hashAdd(hash, key, c);
+                        hashAdd(chhHash, chrom, hash);
+                    }
                 }
             }else if(j == 'h'){
                 methyCnt[3]++;
                 if (fullMode){
+                    /*
                     struct hashEl *hel2 = hashLookup(chhHash, chrom);
                     if (hel2 != NULL) {
                         struct binKeeper *bk2 = (struct binKeeper *) hel2->val;
@@ -715,7 +828,33 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
                         struct binKeeper *bk2 = binKeeperNew(0, size);
                         binKeeperAdd(bk2, start+i, start+i+1, c);
                         hashAdd(chhHash, chrom, bk2);
-                    }   
+                    }
+                    */
+                    struct hashEl *hel2 = hashLookup(chhHash, chrom);
+                    if (hel2 != NULL) {
+                        struct hash *hash2 = (struct hash *) hel2->val;
+                        struct hashEl *hel3 = hashLookup(hash2, key);
+                        if (hel3 == NULL){
+                            struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                            c->c = 0;
+                            c->mc = 0;
+                            c->umc = 1;
+                            c->strand = strand;
+                            hashAdd(hash2, key, c);
+                        }else{
+                            struct cpgC *cg2 = (struct cpgC *) hel3->val;
+                            (cg2->umc)++;
+                        }
+                    } else {
+                        struct cpgC *c = malloc(sizeof(struct cpgC)); //change from each CpG to 2 base as bismark does this
+                        c->c = 0;
+                        c->mc = 0;
+                        c->umc = 1;
+                        c->strand = strand;
+                        struct hash *hash = newHash(0);
+                        hashAdd(hash, key, c);
+                        hashAdd(chhHash, chrom, hash);
+                    }
                 }
             }else if(j == 'U'){
                 methyCnt[6]++;

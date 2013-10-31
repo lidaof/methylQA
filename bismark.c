@@ -132,9 +132,9 @@ int main_bismark (int argc, char *argv[]) {
         fprintf(stderr, "* Output CpG methylation calls\n");
         writecpgBismarkLite(cpgHash, forwardcg, reversecg);
         fprintf(stderr, "* Output CHG methylation calls\n");
-        writecpgBismarkLite(chgHash, forwardchg, reversechg);
+        writecpgBismarkLiteHash(chgHash, forwardchg, reversechg);
         fprintf(stderr, "* Output CHH methylation calls\n");
-        writecpgBismarkLite(chhHash, forwardchh, reversechh);
+        writecpgBismarkLiteHash(chhHash, forwardchh, reversechh);
         fprintf(stderr, "* Sorting methylation calls\n");
         sortBedfile(forwardcg);
         sortBedfile(reversecg);
