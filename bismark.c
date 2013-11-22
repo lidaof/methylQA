@@ -11,6 +11,7 @@ int bismark_usage(){
     fprintf(stderr, "         -b       bismark-like output [off]\n");
     fprintf(stderr, "         -F       full output, will generate 9 files [off], if speficied, will set -s off, -b on\n");
     fprintf(stderr, "         -B       keep the density bed files [off]\n");
+    fprintf(stderr, "         -c       read coverage threshold [5]\n");
     fprintf(stderr, "         -I       Insert length threshold [500]\n");
     fprintf(stderr, "         -o       output prefix [basename of first input filename without extension]\n");
     fprintf(stderr, "         -h       help message\n");
@@ -29,6 +30,7 @@ int main_bismark (int argc, char *argv[]) {
     unsigned long long int *cnt2 = NULL;
     int optSam = 0, c, optaddChr = 0, optStats = 0, optBis = 0, optFull = 0, optKeep = 0;
     unsigned int optisize = 500;
+    int optcov = 5;
     char *optoutput = NULL;
     struct hash *cpgHash = newHash(0);
     struct hash *chgHash = newHash(0);
@@ -36,7 +38,7 @@ int main_bismark (int argc, char *argv[]) {
     time_t start_time, end_time;
     start_time = time(NULL);
     
-    while ((c = getopt(argc, argv, "SCsbFBo:I:h?")) >= 0) {
+    while ((c = getopt(argc, argv, "SCsbFBo:c:I:h?")) >= 0) {
         switch (c) {
             case 'S': optSam = 1; break;
             case 'C': optaddChr = 1; break;
@@ -44,6 +46,7 @@ int main_bismark (int argc, char *argv[]) {
             case 'b': optBis = 1; break;
             case 'F': optFull = 1; break;
             case 'B': optKeep = 1; break;
+            case 'c': optcov = (int)strtol(optarg, 0, 0); break;
             case 'I': optisize = (unsigned int)strtol(optarg, 0, 0); break;
             case 'o': optoutput = strdup(optarg); break;
             case 'h':
@@ -60,6 +63,7 @@ int main_bismark (int argc, char *argv[]) {
 
     fprintf(stderr, "* CpG file provided: %s\n", cpg_bed_file);
     fprintf(stderr, "* Insert size cutoff: %u\n", optisize);
+    fprintf(stderr, "* Read coverage threshold: %i\n", optcov);
    
     struct hash *chrHash = hashNameIntFile(chr_size_file);
     
@@ -125,16 +129,16 @@ int main_bismark (int argc, char *argv[]) {
 
     //sam file to bed file
     //fprintf(stderr, "* Parsing the SAM/BAM file\n");
-    cnt = bismarkBamParse(sam_file, chrHash, cpgHash, chgHash, chhHash, forwardread, reverseread, optSam, optaddChr, optFull);
+    cnt = bismarkBamParse(sam_file, chrHash, cpgHash, chgHash, chhHash, forwardread, reverseread, optSam, optaddChr, optFull, optisize);
     
     //write to file
     if (optFull){
         fprintf(stderr, "* Output CpG methylation calls\n");
-        writecpgBismarkLite(cpgHash, forwardcg, reversecg);
+        writecpgBismarkLite(cpgHash, forwardcg, reversecg, optcov);
         fprintf(stderr, "* Output CHG methylation calls\n");
-        writecpgBismarkLiteHash(chgHash, forwardchg, reversechg);
+        writecpgBismarkLiteHash(chgHash, forwardchg, reversechg, optcov);
         fprintf(stderr, "* Output CHH methylation calls\n");
-        writecpgBismarkLiteHash(chhHash, forwardchh, reversechh);
+        writecpgBismarkLiteHash(chhHash, forwardchh, reversechh, optcov);
         fprintf(stderr, "* Sorting methylation calls\n");
         sortBedfile(forwardcg);
         sortBedfile(reversecg);
@@ -149,7 +153,7 @@ int main_bismark (int argc, char *argv[]) {
         bedItemOverlapCount(chrHash, forwardread, forwardread1);
         bedItemOverlapCount(chrHash, reverseread, reverseread1);
     }else{
-        cnt2 = writecpgBismark(cpgHash, outbedGraphfile, outCpGfile, optStats);
+        cnt2 = writecpgBismark(cpgHash, outbedGraphfile, outCpGfile, optStats, optcov);
         //sort output
         if(!optStats) {
             fprintf(stderr, "* Sorting output density\n");

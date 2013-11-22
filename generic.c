@@ -152,23 +152,24 @@ void writeReportBismark(char *outfile, unsigned long long int *cnt, unsigned lon
     fprintf(f, "\n");
     fprintf(f, "uniquely mappable reads (pair): %llu\n", cnt[0]);
     fprintf(f, "quality failed mapped reads (pair) in the bismark bam: %llu\n", cnt[1]);
+    fprintf(f, "oversized mapped reads (pair) in the bismark bam: %llu\n", cnt[4]);
     //fprintf(f, "duplicated mapped reads (pair) (per lane based): %llu\n", cnt[2]);
     fprintf(f, "total base of uniquely mapped reads (pair): %llu\n", cnt[3]);
     fprintf(f, "total base of uniquely mapped reads (pair) cover genome base (%lli): %.1fX\n", genomeBase, cnt[3]*1.0/genomeBase);
     fprintf(f, "\n");
     fprintf(f, "in all uniquely mapped reads (pair), found:\n");
-    fprintf(f, "    number of methylated C in CHG context (was protected): %llu\n", cnt[4]);            // X for 
-    fprintf(f, "    number of not methylated C in CHG context (was converted): %llu\n", cnt[5]);        // x for 
-    fprintf(f, "        C->T convertion rate in CHG context: %.2f%%\n", cnt[5]*100.0/(cnt[5]+cnt[4]));
-    fprintf(f, "    number of methylated C in CHH context (was protected): %llu\n", cnt[6]);            // H for 
-    fprintf(f, "    number of not methylated C in CHH context (was converted): %llu\n", cnt[7]);        // h for 
-    fprintf(f, "        C->T convertion rate in CHH context: %.2f%%\n", cnt[7]*100.0/(cnt[7]+cnt[6]));
-    fprintf(f, "    number of methylated C in CpG context (was protected): %llu\n", cnt[8]);            // Z for 
-    fprintf(f, "    number of not methylated C in CpG context (was converted): %llu\n", cnt[9]);        // z for 
-    fprintf(f, "        C->T convertion rate in CpG context: %.2f%%\n", cnt[9]*100.0/(cnt[9]+cnt[8]));
-    fprintf(f, "    number of methylated C in Unknown context (was protected): %llu\n", cnt[10]);        // U for 
-    fprintf(f, "    number of not methylated C in Unknown context (was converted): %llu\n", cnt[11]);    // u for 
-    fprintf(f, "        C->T convertion rate in Unknown context: %.2f%%\n", cnt[11]*100.0/(cnt[11]+cnt[10]));
+    fprintf(f, "    number of methylated C in CHG context (was protected): %llu\n", cnt[5]);            // X for 
+    fprintf(f, "    number of not methylated C in CHG context (was converted): %llu\n", cnt[6]);        // x for 
+    fprintf(f, "        C->T convertion rate in CHG context: %.2f%%\n", cnt[6]*100.0/(cnt[6]+cnt[5]));
+    fprintf(f, "    number of methylated C in CHH context (was protected): %llu\n", cnt[7]);            // H for 
+    fprintf(f, "    number of not methylated C in CHH context (was converted): %llu\n", cnt[8]);        // h for 
+    fprintf(f, "        C->T convertion rate in CHH context: %.2f%%\n", cnt[8]*100.0/(cnt[8]+cnt[7]));
+    fprintf(f, "    number of methylated C in CpG context (was protected): %llu\n", cnt[9]);            // Z for 
+    fprintf(f, "    number of not methylated C in CpG context (was converted): %llu\n", cnt[10]);        // z for 
+    fprintf(f, "        C->T convertion rate in CpG context: %.2f%%\n", cnt[10]*100.0/(cnt[10]+cnt[9]));
+    fprintf(f, "    number of methylated C in Unknown context (was protected): %llu\n", cnt[11]);        // U for 
+    fprintf(f, "    number of not methylated C in Unknown context (was converted): %llu\n", cnt[12]);    // u for 
+    fprintf(f, "        C->T convertion rate in Unknown context: %.2f%%\n", cnt[12]*100.0/(cnt[12]+cnt[11]));
     fprintf(f, "\n");
     if (cnt2 != NULL){
         if (bisMode){
@@ -383,7 +384,7 @@ void writecpgCov(struct hash *cpgHash, char *outfile){
     carefulClose(&f);
 }
 
-unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly){
+unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly, int covThres){
     unsigned long long int *cnt = malloc(sizeof(unsigned long long int)*20);
     int i, j = 0;
     unsigned long long int tot=0; //tot will be the 20th element, which was not the coverage count, was the total C (in CpG) count
@@ -406,8 +407,10 @@ unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, cha
             if (oc->mc > 0 || oc->umc > 0){
                 j = oc->mc + oc->umc;
                 if(!statsOnly) {
-                    fprintf(f, "%s\t%i\t%i\t%i\n", hel->name, be->start, be->end, j);
-                    fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                    if (j >= covThres){
+                        fprintf(f, "%s\t%i\t%i\t%i\n", hel->name, be->start, be->end, j);
+                        fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                    }
                 }
                 //if (j == 0) cnt[0] ++;
                 if (j == 1) cnt[1]++;
@@ -442,7 +445,7 @@ unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, cha
     return cnt;
 }
 
-void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilerev){
+void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilerev, int covThres){
     int j = 0;
     struct hashEl *hel;
     struct hashCookie cookie = hashFirst(cpgHash);
@@ -456,12 +459,14 @@ void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilere
             struct cpgC *oc = (struct cpgC *) be->val;
             if (oc->mc > 0 || oc->umc > 0){
                 j = oc->mc + oc->umc;
-                if (oc->strand == '+'){
-                    fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
-                    //fprintf(f, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
-                }else{
-                    fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
-                    //fprintf(f2, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                if (j >= covThres){
+                    if (oc->strand == '+'){
+                        fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                        //fprintf(f, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                    }else{
+                        fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, (float)(oc->mc)/j);
+                        //fprintf(f2, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                    }
                 }
             }
         }
@@ -471,7 +476,7 @@ void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilere
     carefulClose(&f2);
 }
 
-void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfilerev){
+void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfilerev, int covThres){
     int j = 0, k;
     struct hashEl *hel, *hel2;
     struct hashCookie cookie = hashFirst(cpgHash);
@@ -485,13 +490,15 @@ void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfi
             //if (oc->mc > 0 || oc->umc > 0){
             if (oc->mc > 0){
                 j = oc->mc + oc->umc;
-                k = (int)strtol(hel2->name, 0, 0);
-                if (oc->strand == '+'){
-                    fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, k, k+1, (float)(oc->mc)/j);
-                    //fprintf(f, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
-                }else{
-                    fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, k, k+1, (float)(oc->mc)/j);
-                    //fprintf(f2, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                if (j >= covThres) {
+                    k = (int)strtol(hel2->name, 0, 0);
+                    if (oc->strand == '+'){
+                        fprintf(f, "%s\t%i\t%i\t%.4f\n", hel->name, k, k+1, (float)(oc->mc)/j);
+                        //fprintf(f, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                    }else{
+                        fprintf(f2, "%s\t%i\t%i\t%.4f\n", hel->name, k, k+1, (float)(oc->mc)/j);
+                        //fprintf(f2, "%s\t%i\t%i\t%i\t%i\t%.4f\n", hel->name, be->start, be->end, oc->mc, oc->umc, (float)(oc->mc)/j);
+                    }
                 }
             }
         }
@@ -867,7 +874,7 @@ void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chg
     }
 }
 
-unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *forwardread, char *reverseread, int isSam, int addChr, int fullMode) {
+unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *forwardread, char *reverseread, int isSam, int addChr, int fullMode, unsigned int iSize) {
     /*
   ### . for bases not involving cytosines                       ###
   ### X for methylated C in CHG context (was protected)         ###
@@ -894,8 +901,8 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
     //char key[100];
     int fi, start, left, right, distance=0; //cutoff used for remove PCR duplication, single end as 1, paired end as 2
     //int fstart, fend, fstrand, cutoff = 0;
-    unsigned long long int linecnt = 0, dupCount = 0, failCount = 0, totalbase = 0;
-    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 12);
+    unsigned long long int linecnt = 0, dupCount = 0, failCount = 0, totalbase = 0, oversizeCount = 0;
+    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 13);
     unsigned long long int *methyCnt = malloc(sizeof(unsigned long long int) * 8);
     FILE *forward_f = NULL, *reverse_f = NULL;
     int i;
@@ -908,7 +915,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
     //process sam/bam list
     int numFields = chopByChar(samfile, ',', row, ArraySize(row));
     for(fi = 0; fi < numFields; fi++){
-        fprintf(stderr, "* Processing %s\n", row[fi]);
+        fprintf(stderr, "\n* Processing %s", row[fi]);
         samfile_t *samfp;
         bam1_t *b;
         bam_header_t *h;
@@ -943,6 +950,9 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
                     strcat(chr, h->target_name[b->core.tid]);
                 }
             }
+            if (sameWord(chr, "chrM")){
+                continue; //skip chrM
+            }
             //strand
             strcpy(read_cove, bam_aux2Z(bam_aux_get(b, "XR")));
             strcpy(genome_cove, bam_aux2Z(bam_aux_get(b, "XG")));
@@ -972,6 +982,10 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
                     }
                 }
             }else if((b->core.flag ==99) || (b->core.flag == 147) || (b->core.flag == 83) || (b->core.flag == 163) || (b->core.flag == 67) || (b->core.flag == 131) || (b->core.flag == 115) || (b->core.flag == 179) ){
+                if (abs(b->core.isize) > iSize || b->core.isize == 0){
+                    oversizeCount++;
+                    continue;
+                }
                 // paired end, both new and old flag
                 //cutoff = 2;
                 //if (strand == '+'){
@@ -1061,13 +1075,15 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
         freeHash(&dup);
     }
     fprintf(stderr, "\r* Processed lines: %llu\n", linecnt);
+    fprintf(stderr, "* Oversized alignments: %llu\n", oversizeCount);
     fprintf(stderr, "* Quality Failed alignments: %llu\n", failCount);
     //fprintf(stderr, "* Duplicated alignments: %lu\n", dupCount);
     cnt[0] = linecnt;
     cnt[1] = failCount;
     cnt[2] = dupCount;
     cnt[3] = totalbase;
-    for (i=4;i<12;i++) cnt[i] = methyCnt[i-4];
+    cnt[4] = oversizeCount;
+    for (i=5;i<13;i++) cnt[i] = methyCnt[i-5];
     if(fullMode){
         carefulClose(&forward_f);
         carefulClose(&reverse_f);
@@ -2291,7 +2307,7 @@ struct hash *calGenomeCovBedGraph(char *chrsize, char *bedgraph){
     return cov;
 }
 
-void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov){
+void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov, char *optm){
     char *outfile;
     if (asprintf(&outfile, "%s.tex", prefix) < 0)
         errAbort("Preparing output wrong");
@@ -2360,54 +2376,56 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     fprintf(f, "\\includegraphics[width=6.5in]{{%s.genomeCov}.pdf}\n", prefix);
     fprintf(f, "\\end{center}\n");
     fprintf(f, "\n");
-    fprintf(f, "\\section{CpG status}\n");
-    fprintf(f, "\\subsection{CpG coverage}\n");
-    fprintf(f, "\\begin{center}\n");
-    fprintf(f, "\\begin{tabular}{|c|c|}\n");
-    fprintf(f, "\\hline\n");
-    fprintf(f, "Range & Count \\\\ \\hline\n");
-    //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
-    int i;
-    for(i=0;i<19;i++){
-        if (covCnt[i] != 0)
-            fprintf(f, "%s & %i \\\\ \\hline\n", cpglabel[i], covCnt[i]);
+    if (optm != NULL){
+        fprintf(f, "\\section{CpG status}\n");
+        fprintf(f, "\\subsection{CpG coverage}\n");
+        fprintf(f, "\\begin{center}\n");
+        fprintf(f, "\\begin{tabular}{|c|c|}\n");
+        fprintf(f, "\\hline\n");
+        fprintf(f, "Range & Count \\\\ \\hline\n");
+        //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
+        int i;
+        for(i=0;i<19;i++){
+            if (covCnt[i] != 0)
+                fprintf(f, "%s & %i \\\\ \\hline\n", cpglabel[i], covCnt[i]);
+        }
+        fprintf(f, "\\end{tabular}\n");
+        fprintf(f, "\\end{center}\n");
+        fprintf(f, "\n");
+        fprintf(f, "\\begin{center}\n");
+        fprintf(f, "\\includegraphics[width=6.5in]{{%s.cpgCoverage}.pdf}\n", prefix);
+        fprintf(f, "\\end{center}\n");
+        fprintf(f, "\\subsection{CpG count}\n");
+        fprintf(f, "\\begin{center}\n");
+        fprintf(f, "\\begin{tabular}{|c|c|}\n");
+        fprintf(f, "\\hline\n");
+        fprintf(f, "Range & Count \\\\ \\hline\n");
+        //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
+        for(i=0;i<19;i++){
+            if (countCnt[i] != 0)
+                fprintf(f, "%s & %lli \\\\ \\hline\n", cpglabel[i], countCnt[i]);
+        }
+        fprintf(f, "\\end{tabular}\n");
+        fprintf(f, "\\end{center}\n");
+        fprintf(f, "\n");
+        fprintf(f, "\\begin{center}\n");
+        fprintf(f, "\\includegraphics[width=6.5in]{{%s.cpgCount}.pdf}\n", prefix);
+        fprintf(f, "\\end{center}\n");
+        fprintf(f, "\n");
+        long long cpgnum = 0;
+        for(i=0;i<19;i++){
+            cpgnum += (long long)covCnt[i];
+        }
+        long long genomebase = hashIntSum(chrHash);
+        double frac = ((double)countCnt[19] / (double)fragbase) / ((double)cpgnum / (double)genomebase);
+        fprintf(f, "\\section{CpG enrichment}\n");
+        fprintf(f, "\\begin{eqnarray*}\n");
+        fprintf(f, "CpG\\ enrichment &= \\frac{CpG\\ count\\ in\\ fragments\\Big/total\\ base\\ of\\ fragments}{CpG\\ count\\ in\\ genome\\Big/total\\ base\\ of\\ genome} \\\\ \n");
+        fprintf(f, "&= \\frac{%lli\\Big/%lli}{%lli\\Big/%lli} \\\\ \n", countCnt[19], fragbase, cpgnum, genomebase);
+        fprintf(f, "&= \\textbf{%.2f}\n", frac);
+        fprintf(f, "\\end{eqnarray*}\n");
+        fprintf(f, "\n");
     }
-    fprintf(f, "\\end{tabular}\n");
-    fprintf(f, "\\end{center}\n");
-    fprintf(f, "\n");
-    fprintf(f, "\\begin{center}\n");
-    fprintf(f, "\\includegraphics[width=6.5in]{{%s.cpgCoverage}.pdf}\n", prefix);
-    fprintf(f, "\\end{center}\n");
-    fprintf(f, "\\subsection{CpG count}\n");
-    fprintf(f, "\\begin{center}\n");
-    fprintf(f, "\\begin{tabular}{|c|c|}\n");
-    fprintf(f, "\\hline\n");
-    fprintf(f, "Range & Count \\\\ \\hline\n");
-    //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
-    for(i=0;i<19;i++){
-        if (countCnt[i] != 0)
-            fprintf(f, "%s & %lli \\\\ \\hline\n", cpglabel[i], countCnt[i]);
-    }
-    fprintf(f, "\\end{tabular}\n");
-    fprintf(f, "\\end{center}\n");
-    fprintf(f, "\n");
-    fprintf(f, "\\begin{center}\n");
-    fprintf(f, "\\includegraphics[width=6.5in]{{%s.cpgCount}.pdf}\n", prefix);
-    fprintf(f, "\\end{center}\n");
-    fprintf(f, "\n");
-    long long cpgnum = 0;
-    for(i=0;i<19;i++){
-        cpgnum += (long long)covCnt[i];
-    }
-    long long genomebase = hashIntSum(chrHash);
-    double frac = ((double)countCnt[19] / (double)fragbase) / ((double)cpgnum / (double)genomebase);
-    fprintf(f, "\\section{CpG enrichment}\n");
-    fprintf(f, "\\begin{eqnarray*}\n");
-    fprintf(f, "CpG\\ enrichment &= \\frac{CpG\\ count\\ in\\ fragments\\Big/total\\ base\\ of\\ fragments}{CpG\\ count\\ in\\ genome\\Big/total\\ base\\ of\\ genome} \\\\ \n");
-    fprintf(f, "&= \\frac{%lli\\Big/%lli}{%lli\\Big/%lli} \\\\ \n", countCnt[19], fragbase, cpgnum, genomebase);
-    fprintf(f, "&= \\textbf{%.2f}\n", frac);
-    fprintf(f, "\\end{eqnarray*}\n");
-    fprintf(f, "\n");
     fprintf(f, "\\end{document}\n");
     carefulClose(&f);
 }

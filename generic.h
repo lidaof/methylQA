@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.5 (r030)"
+#define methylQA_VERSION "0.1.5 (r032)"
 
 struct mreFrag {
     char pair[100], chr[50];
@@ -59,10 +59,10 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix);
 void sortBedfile(char *bedfile);
 void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int mapQ);
 void writeReportBismark(char *outfile, unsigned long long int *cnt, unsigned long long int *cnt2, int numFields, char *row[100], int bisMode, long long genomeBase);
-void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilerev);
-void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfilerev);
+void writecpgBismarkLite(struct hash *cpgHash, char *outfilefor, char *outfilerev, int covThres);
+void writecpgBismarkLiteHash(struct hash *cpgHash, char *outfilefor, char *outfilerev, int covThres);
 void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *chrom, int start, char *methycall, char strand, int left, int right, unsigned long long int *methyCnt, int fullMode);
-unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *forwardread, char *reverseread, int isSam, int addChr, int fullMode);
+unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *forwardread, char *reverseread, int isSam, int addChr, int fullMode, unsigned int iSize);
 unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHash, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat);
 struct hash *MREfrag2Hash (char *fragfile, int minlen, int maxlen);
 unsigned long long int *filterReadByMREsite(struct hash *hash, char *inBed, char *outBed, int call, char *prefix, int guess);
@@ -84,9 +84,9 @@ long long * bedCpGstat(struct hash *cpgHash, char *bedfile);
 unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct hash *chrHash, struct hash *cpgHash, struct slInt **cpgCount, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat);
 struct hash *initGenomeCovHash(struct hash *chrHash);
 void writeGenomeCov(struct hash *cov, char *outfile);
-unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly);
+unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly, int covThres);
 void plotGenomeCov(struct hash *cov, char *prefix);
 struct hash *calGenomeCovBedGraph(char *chrsize, char *bedgraph);
-void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov);
+void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov, char *optm);
 void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long int *cnt, unsigned long long int cnt1, struct hash *chrHash, struct hash *cpgHash, long long *cnt3, struct fragd *fragdistro);
 void tex2pdf(char *prefix);

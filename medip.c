@@ -164,7 +164,7 @@ int main_medip (int argc, char *argv[]) {
     fprintf(stderr, "* Preparing report file\n");
     writeReportDensity(outReportfile, cnt, optQual);
 
-    genMeDIPTex(output, cnt, fragbase, covCnt, countCnt, slPair, hash, covhash);
+    genMeDIPTex(output, cnt, fragbase, covCnt, countCnt, slPair, hash, covhash, optm);
     tex2pdf(output);
 
     
