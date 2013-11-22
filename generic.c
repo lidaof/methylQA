@@ -915,7 +915,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
     //process sam/bam list
     int numFields = chopByChar(samfile, ',', row, ArraySize(row));
     for(fi = 0; fi < numFields; fi++){
-        fprintf(stderr, "\n* Processing %s", row[fi]);
+        fprintf(stderr, "\n* Processing %s\n", row[fi]);
         samfile_t *samfp;
         bam1_t *b;
         bam_header_t *h;
