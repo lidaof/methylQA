@@ -1225,7 +1225,7 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
                             int tmpend = start + b->core.isize;
                             end = min(cend, (unsigned int)tmpend);
                         }else{
-                            start = (unsigned int) b->core.pos;
+                            start = (unsigned int) b->core.mpos;
                             strand = '-';
                             int tmpend = start - b->core.isize;
                             end = min(cend, (unsigned int)tmpend);
@@ -1478,7 +1478,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
                             int tmpend = start + b->core.isize;
                             end = min(cend, (unsigned int)tmpend);
                         }else{
-                            start = (unsigned int) b->core.pos;
+                            start = (unsigned int) b->core.mpos;
                             strand = '-';
                             int tmpend = start - b->core.isize;
                             end = min(cend, (unsigned int)tmpend);
@@ -2336,7 +2336,7 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     fprintf(f, "\\begin{tabular}{|c|c|}\n");
     fprintf(f, "\\hline\n");
     fprintf(f, "total fragments & %llu \\\\ \\hline\n", cnt[0]);
-    fprintf(f, "mapped fragmentss & %llu \\\\ \\hline\n", cnt[6]);
+    fprintf(f, "mapped fragments & %llu \\\\ \\hline\n", cnt[6]);
     fprintf(f, "uniquely mapped fragments & %llu \\\\ \\hline\n", cnt[7]);
     fprintf(f, "non-redundant uniquely mapped fragments & %llu \\\\ \\hline\n", cnt[9]);
     fprintf(f, "\\end{tabular}\n");
@@ -2459,7 +2459,7 @@ void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long in
     fprintf(f, "\\begin{tabular}{|c|c|}\n");
     fprintf(f, "\\hline\n");
     fprintf(f, "total fragments & %llu \\\\ \\hline\n", cnt2[0]);
-    fprintf(f, "mapped fragmentss & %llu \\\\ \\hline\n", cnt2[6]);
+    fprintf(f, "mapped fragments & %llu \\\\ \\hline\n", cnt2[6]);
     fprintf(f, "uniquely mapped fragments & %llu \\\\ \\hline\n", cnt2[7]);
     fprintf(f, "MRE filtered fragments & %llu \\\\ \\hline\n", cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
     fprintf(f, "\\end{tabular}\n");
@@ -2469,7 +2469,7 @@ void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long in
     fprintf(f, "\\includegraphics[width=6.5in]{{%s.mappingStat}.pdf}\n", prefix);
     fprintf(f, "\\end{center}\n");
     fprintf(f, "\n");
-    fprintf(f, "\\section{MRE fragemets stats}\n");
+    fprintf(f, "\\section{MRE fragments stats}\n");
     fprintf(f, "\\subsection{Distribution by enzyme cut site}\n");
     fprintf(f, "\\begin{center}\n");
     fprintf(f, "\\begin{tabular}{|c|c|}\n");
@@ -2518,9 +2518,6 @@ void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long in
     fprintf(f, "\\begin{center}\n");
     fprintf(f, "\\includegraphics[width=6.5in]{{%s.fragmentsizedistro}.pdf}\n", prefix);
     fprintf(f, "\\end{center}\n");
-    fprintf(f, "\\section{Sampled CpG sites}\n");
-    fprintf(f, "Total \\begin{Huge}%llu\\end{Huge} CpG sites have been sampled in this dataset.\n", cnt1);
-    fprintf(f, "\n");
     long long cpgnum = 0;
     struct hashEl *hel;
     struct hashCookie cookie = hashFirst(cpgHash);
@@ -2533,6 +2530,9 @@ void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long in
         }
         binKeeperFree(&bk);
     }
+    fprintf(f, "\\section{Sampled CpG sites}\n");
+    fprintf(f, "Total \\begin{Huge}%llu\\end{Huge} CpG sites (%.2f\\%%) have been sampled in this dataset.\n", cnt1, (double)cnt1*100.0/cpgnum);
+    fprintf(f, "\n");
     long long genomebase = hashIntSum(chrHash);
     double frac = ((double)cnt3[1] / (double)cnt3[0]) / ((double)cpgnum / (double)genomebase);
     fprintf(f, "\\section{CpG enrichment}\n");
