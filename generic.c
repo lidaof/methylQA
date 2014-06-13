@@ -950,9 +950,9 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
                     strcat(chr, h->target_name[b->core.tid]);
                 }
             }
-            if (sameWord(chr, "chrM")){
-                continue; //skip chrM
-            }
+            //if (sameWord(chr, "chrM")){
+            //    continue; //skip chrM
+            //}
             //strand
             strcpy(read_cove, bam_aux2Z(bam_aux_get(b, "XR")));
             strcpy(genome_cove, bam_aux2Z(bam_aux_get(b, "XG")));
