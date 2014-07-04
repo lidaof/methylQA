@@ -9,7 +9,9 @@ unitSize overMax = 0;
 
 static int blockSize = 256;
 static int itemsPerSlot = 1024;
+static boolean clipDontDie = FALSE;
 static boolean doCompress = FALSE;
+static boolean compress = FALSE;
 
 
 void writeSections(struct bbiChromUsage *usageList, struct lineFile *lf, 
@@ -589,3 +591,23 @@ freez(&prevChrom);
 freeHash(&seenHash);
 }
 
+void bigWigFileCreate2(
+	char *inName, 		/* Input file in ascii wiggle format. */
+	struct hash *chromSizeHash, 	/* chrom size hash. */
+	char *outName)
+/* Convert ascii format wig file (in fixedStep, variableStep or bedGraph format) 
+ * to binary big wig format. */
+{
+/* This code needs to agree with code in two other places currently - bigBedFileCreate,
+ * and bbiFileOpen.  I'm thinking of refactoring to share at least between
+ * bigBedFileCreate and bigWigFileCreate.  It'd be great so it could be structured
+ * so that it could send the input in one chromosome at a time, and send in the zoom
+ * stuff only after all the chromosomes are done.  This'd potentially reduce the memory
+ * footprint by a factor of 2 or 4.  Still, for now it works. -JK */
+struct lm *lm = lmInit(0);
+struct bwgSection *sectionList = bwgParseWig(inName, clipDontDie, chromSizeHash, itemsPerSlot, lm);
+if (sectionList == NULL)
+    errAbort("%s is empty of data", inName);
+bwgCreate(sectionList, chromSizeHash, blockSize, itemsPerSlot, compress, outName);
+lmCleanup(&lm);
+}

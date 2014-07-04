@@ -14,7 +14,6 @@
 #include "bPlusTree.h"
 #include "bbiFile.h"
 #include "bwgInternal.h"
-#include "bigWig.h"
 
 /* define unitSize to be a larger storage class if your counts
  * are overflowing. */
@@ -44,3 +43,7 @@ void bedGraphToBigWig(char *inName, char *chromSizes, char *outName);
 
 void outputCounts(unitSize *counts, char *chrom, unsigned size, FILE *f);
 void bedItemOverlapCount(struct hash *chromHash, char *infile, char *outfile);
+void bigWigFileCreate2(
+	char *inName, 		/* Input file in ascii wiggle format. */
+	struct hash *chromSizeHash, 	/* chrom size hash. */
+	char *outName);

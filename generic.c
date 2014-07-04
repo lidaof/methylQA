@@ -2572,3 +2572,78 @@ void tex2pdf(char *prefix){
     unlink(tf4);
     unlink(tf5);
 }
+
+struct hash *chromHashFrombbiFile(char *bbiFile)
+/* get chrom sizes hash from bbi file. */
+{
+struct hash *hash = hashNew(0);
+struct bbiFile *bwf = bigWigFileOpen(bbiFile);
+struct bbiChromInfo *chrom, *chromList = bbiChromList(bwf);
+for (chrom = chromList; chrom != NULL; chrom = chrom->next)
+    {
+        hashAddInt(hash, chrom->name, chrom->size);
+    }
+bbiChromInfoFreeList(&chromList);
+bbiFileClose(&bwf);
+return hash;
+}
+
+void bigWigToBedGraph2(char *inFile, char *outFile, float scale)
+/* bigWigToBedGraph - Convert from bigWig to bedGraph format.. */
+{
+struct bbiFile *bwf = bigWigFileOpen(inFile);
+FILE *f = mustOpen(outFile, "w");
+struct bbiChromInfo *chrom, *chromList = bbiChromList(bwf);
+for (chrom = chromList; chrom != NULL; chrom = chrom->next)
+    {
+    boolean firstTime = TRUE;
+    int saveStart = -1, prevEnd = -1;
+    double saveVal = -1.0;
+
+    char *chromName = chrom->name;
+    struct lm *lm = lmInit(0);
+    int start = 0, end = chrom->size;
+    struct bbiInterval *interval, *intervalList = bigWigIntervalQuery(bwf, chromName, 
+    	start, end, lm);
+    for (interval = intervalList; interval != NULL; interval = interval->next)
+	{
+	if (firstTime)
+	    {
+	    saveStart = interval->start;
+	    saveVal = (interval->val) * scale;
+	    firstTime = FALSE;
+	    }
+	else
+	    {
+	    if (!((prevEnd == interval->start) && (saveVal == (interval->val) * scale)))
+		{
+		fprintf(f, "%s\t%u\t%u\t%g\n", chromName, saveStart, prevEnd, saveVal);
+		saveStart = interval->start;
+		saveVal = (interval->val) * scale;
+		}
+
+	    }
+	prevEnd = interval->end;
+	}
+    if (!firstTime)
+	fprintf(f, "%s\t%u\t%u\t%g\n", chromName, saveStart, prevEnd, saveVal);
+
+    lmCleanup(&lm);
+    }
+bbiChromInfoFreeList(&chromList);
+carefulClose(&f);
+bbiFileClose(&bwf);
+}
+
+void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale)
+{
+    /*
+     *naive way of re-scale a bigwig file
+     to bedgraph, scale the value, then bedgraph to bigwig again
+     * */
+    if (!isBigWig(bwfile))
+        errAbort("error, %s is not a bigWig file", bwfile);
+    struct hash *chrHash = chromHashFrombbiFile(bwfile);
+    bigWigToBedGraph2(bwfile, outbedgraph, scale);
+    bigWigFileCreate2(outbedgraph, chrHash, outbwfile);
+}
