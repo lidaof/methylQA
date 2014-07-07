@@ -2588,9 +2588,12 @@ bbiFileClose(&bwf);
 return hash;
 }
 
-void bigWigToBedGraph2(char *inFile, char *outFile, float scale)
+void bigWigToBedGraph2(char *inFile, char *outFile, float scale, int tominus)
 /* bigWigToBedGraph - Convert from bigWig to bedGraph format.. */
 {
+int minus = 1;
+if(tominus)
+    minus = -1;
 struct bbiFile *bwf = bigWigFileOpen(inFile);
 FILE *f = mustOpen(outFile, "w");
 struct bbiChromInfo *chrom, *chromList = bbiChromList(bwf);
@@ -2610,16 +2613,16 @@ for (chrom = chromList; chrom != NULL; chrom = chrom->next)
 	if (firstTime)
 	    {
 	    saveStart = interval->start;
-	    saveVal = (interval->val) * scale;
+	    saveVal = (interval->val) * scale * minus;
 	    firstTime = FALSE;
 	    }
 	else
 	    {
-	    if (!((prevEnd == interval->start) && (saveVal == (interval->val) * scale)))
+	    if (!((prevEnd == interval->start) && (saveVal == (interval->val) * scale * minus )))
 		{
 		fprintf(f, "%s\t%u\t%u\t%g\n", chromName, saveStart, prevEnd, saveVal);
 		saveStart = interval->start;
-		saveVal = (interval->val) * scale;
+		saveVal = (interval->val) * scale * minus;
 		}
 
 	    }
@@ -2635,7 +2638,7 @@ carefulClose(&f);
 bbiFileClose(&bwf);
 }
 
-void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale)
+void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale, int tominus)
 {
     /*
      *naive way of re-scale a bigwig file
@@ -2643,7 +2646,8 @@ void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale)
      * */
     if (!isBigWig(bwfile))
         errAbort("error, %s is not a bigWig file", bwfile);
+    fprintf(stderr, "* Applying scale\n");
     struct hash *chrHash = chromHashFrombbiFile(bwfile);
-    bigWigToBedGraph2(bwfile, outbedgraph, scale);
+    bigWigToBedGraph2(bwfile, outbedgraph, scale, tominus);
     bigWigFileCreate2(outbedgraph, chrHash, outbwfile);
 }

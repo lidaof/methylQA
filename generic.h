@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.6 (r036)"
+#define methylQA_VERSION "0.1.6 (r037)"
 
 struct mreFrag {
     char pair[100], chr[50];
@@ -93,5 +93,5 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
 void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long int *cnt, unsigned long long int cnt1, struct hash *chrHash, struct hash *cpgHash, long long *cnt3, struct fragd *fragdistro);
 void tex2pdf(char *prefix);
 struct hash *chromHashFrombbiFile(char *bbiFile);
-void bigWigToBedGraph2(char *inFile, char *outFile, float scale);
-void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale);
+void bigWigToBedGraph2(char *inFile, char *outFile, float scale, int tominus);
+void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale, int tominus);
