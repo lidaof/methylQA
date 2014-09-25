@@ -905,7 +905,8 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
     unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 13);
     unsigned long long int *methyCnt = malloc(sizeof(unsigned long long int) * 8);
     FILE *forward_f = NULL, *reverse_f = NULL;
-    int i;
+    int i, cend;
+    struct hash *nochr = newHash(0);
     for(i = 0; i < 8; i++) cnt[i] = 0;
     for(i = 0; i < 8; i++) methyCnt[i] = 0;
     if (fullMode){
@@ -954,6 +955,16 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
             //    continue; //skip chrM
             //}
             //strand
+            //check Ref reads mapped to existed in chromosome size file or not
+            struct hashEl *he = hashLookup(nochr, chr);
+            if (he != NULL)
+                continue;
+            cend = (unsigned int) (hashIntValDefault(chrHash, chr, 2) - 1);
+            if (cend == 1){
+                hashAddInt(nochr, chr, 1);
+                warn("* Warning: read ends mapped to chromosome %s will be discarded as %s not existed in the chromosome size file", chr, chr);
+                continue;
+            }
             strcpy(read_cove, bam_aux2Z(bam_aux_get(b, "XR")));
             strcpy(genome_cove, bam_aux2Z(bam_aux_get(b, "XG")));
             if (sameWord( genome_cove, read_cove )){
@@ -1078,6 +1089,7 @@ unsigned long long int *bismarkBamParse(char *samfile, struct hash *chrHash, str
     fprintf(stderr, "* Oversized alignments: %llu\n", oversizeCount);
     fprintf(stderr, "* Quality Failed alignments: %llu\n", failCount);
     //fprintf(stderr, "* Duplicated alignments: %lu\n", dupCount);
+    freeHash(&nochr);
     cnt[0] = linecnt;
     cnt[1] = failCount;
     cnt[2] = dupCount;
