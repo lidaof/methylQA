@@ -1116,6 +1116,7 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
     unsigned long long int reads_nonredundant_unique = 0;
     unsigned long long int reads_mapped = 0;
     unsigned long long int reads_mapped_unique = 0;
+    unsigned long long int map_supp = 0;
     struct hash *nochr = newHash(0), *dup = newHash(0);
     if (isSam) {
         if ( (samfp = samopen(samfile, "r", 0)) == 0) {
@@ -1154,6 +1155,10 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
             fprintf(stderr, "\r* Processed read ends: %llu", (read_end1 + read_end2));
         if (b->core.flag & BAM_FUNMAP)
             continue;
+        if (b->core.flag & BAM_SUPP){
+            map_supp++;
+            continue;
+        }
         if (b->core.flag & BAM_FPAIRED) {
             if (b->core.flag & BAM_FREAD1){
                 read_end1_mapped++;
@@ -1335,6 +1340,7 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
         }
     }
     fprintf(stderr, "\r* Processed read ends: %llu\n", (read_end1 + read_end2));
+    fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
     samclose(samfp);
     free(buf);
     bam_destroy1(b);
@@ -1369,6 +1375,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     unsigned long long int reads_nonredundant_unique = 0;
     unsigned long long int reads_mapped = 0;
     unsigned long long int reads_mapped_unique = 0;
+    unsigned long long int map_supp = 0;
     struct hash *nochr = newHash(0), *dup = newHash(0);
     if (isSam) {
         if ( (samfp = samopen(samfile, "r", 0)) == 0) {
@@ -1407,6 +1414,10 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
             fprintf(stderr, "\r* Processed read ends: %llu", (read_end1 + read_end2));
         if (b->core.flag & BAM_FUNMAP)
             continue;
+        if (b->core.flag & BAM_SUPP){
+            map_supp++;
+            continue;
+        }
         if (b->core.flag & BAM_FPAIRED) {
             if (b->core.flag & BAM_FREAD1){
                 read_end1_mapped++;
@@ -1611,6 +1622,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
             fprintf(stderr, "* Mixed of single & paired end data\n");
         }
     }
+    fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
     samclose(samfp);
     free(buf);
     bam_destroy1(b);
