@@ -1620,6 +1620,8 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
             fprintf(stderr, "* Single end data\n");
         } else {
             fprintf(stderr, "* Mixed of single & paired end data\n");
+            slReverse(&pairsl); // included for avoid fragbase count as 0
+            *slPair = pairsl;   // note the inclusion of single reads FIXME
         }
     }
     fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
