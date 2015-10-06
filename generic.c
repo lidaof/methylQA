@@ -2250,7 +2250,7 @@ struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, uns
 
 char *print_bar(int x){
     char *s;
-    s = malloc(x);
+    s = malloc(x+1);
     int i;
     for (i = 0; i < x; i++){
         s[i] = '*';
