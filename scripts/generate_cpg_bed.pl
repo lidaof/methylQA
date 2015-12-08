@@ -93,13 +93,14 @@ generate_cpg_bed.pl - DESCRIPTION
 
 =head1 SYNOPSIS
 
-Requires:
+To create the file.genome file with chromosomal sizes, use the create_genome_sizes_from_bam.pl script.
 
-samtools
-seqtk
-bedtools
+This script requires samtools and seqtk. There is a linux 64bit copy of those tools under methylQA/bin/samtools and methylQA/bin/seqtk .
 
-perl methylqa/scripts/chr_chunk.pl -i /data/Genomes/Human/hs38DH/hg38.chr.genome | while read chunk; do perl methylqa/scripts/generate_cpg_bed.pl -plus_sign -add_chr -i /data/Genomes/Human/hs38DH/hs38DH.fa -chunk $chunk ; done | bedtools sort -i stdin | bgzip -c > hs38DH.cpg.chr.bed.gz
+Then use the following command-line (all in one line):
+
+perl methylQA/scripts/chr_chunk.pl -i GRCm38.genome | while read i; do perl methylQA/scripts/generate_cpg_bed.pl -plus_sign -i $GROUP/Genomes/Mouse/GRCm38/Mus_musculus.GRCm38.68.dna.all.fa -chunk $i; done | sort -k1,1 -k2,2n | bgzip -c > GRCm38.cpg.nnn.bed.gz
+
 
 =head1 DESCRIPTION
 
