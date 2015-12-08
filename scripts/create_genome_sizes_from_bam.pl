@@ -12,7 +12,7 @@ use File::Basename;
 # $name = fileparse($fullname,@suffixlist);
 # $basename = basename($fullname,@suffixlist);
 # $dirname  = dirname($fullname);
-my $outdir = "/bi/group/cegx/CEGXP";
+my $outdir = ".";
 my $outname;
 GetOptions(
 	   'i|input|inputfile:s' => \$inputfile,
@@ -28,6 +28,7 @@ while (<IN>) {
   my $line = $_;
   $self->{genome}{$1} = $2 if ($line =~ /^\@SQ\tSN\:(\S+)\tLN\:(\d+)/);
   $self->{reference} = $1 if ($line =~ /^\@PG.+reference\s+(\S+)\s+/);
+  $self->{reference} = $1 if ($line =~ /\s+(\S+)\s+\-1/);
 }
 
 my @suffixlist = ('.fa','.fasta','.fa.gz','.fasta.gz','.fas','.fas.gz');
