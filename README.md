@@ -1,5 +1,3 @@
-# methylQA (Version: 0.1.6 (r038))
-# Sep/25/14
 ## methylation sequence data quality assessment tool
 
 ### install
@@ -23,3 +21,17 @@ Libraries from UCSC Kent source (http://genome.ucsc.edu/admin/jk-install.html) a
 
 ### Contact
 Questions or comments, please contact our mailing list (methylQA@googlegroups.com), thanks!
+
+### Addendum: generate cpg files for a reference genome
+
+Given a bam file produced by aligning reads to a bisulfite converted reference genome, one can produce the required bed file describing the coordinates of CpG positions and the genome sizes files needed for methylqa bismark mode.
+
+To produce the genome sizes file, use:
+
+create_genome_sizes_from_bam.pl
+
+To produce the cpg bed file, use:
+
+chr_chunk.pl and generate_cpg_bed.pl
+
+This will produce the files needed to run methylqa bismark mode together with the input bam file.
