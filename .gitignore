@@ -1,5 +1,6 @@
-*.[oa]
-methylQA
-*test*
-cuskent/*.[oa]
-cussamtools/*.[oa]
+-*.[oa]
+-methylQA
+-*test*
+-cuskent/*.[oa]
+-cussamtools/*.[oa]
+*~
