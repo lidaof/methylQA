@@ -141,6 +141,7 @@ void writeReportDensity(char *outfile, unsigned long long int *cnt, unsigned int
     //fprintf(f, "non-redundant mappable reads (pair): %llu\n", cnt[8]);
     fprintf(f, "uniquely mapped reads (pair) (mapQ >= %u): %llu\n", mapQ, cnt[7]);
     fprintf(f, "non-redundant uniquely mapped reads (pair): %llu\n", cnt[9]);
+    fprintf(f, "skipped supplementary alignments: %llu\n", cnt[10]);
     carefulClose(&f);
 }
 
@@ -1108,7 +1109,7 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
     FILE *outbed_f = mustOpen(outbed, "w");
     char chr[100], key[100], strand;
     unsigned int start, end, cend;
-    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 10);
+    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 11);
     unsigned long long int read_end1 = 0, read_end2 = 0;
     unsigned long long int read_end1_mapped = 0, read_end2_mapped = 0;
     unsigned long long int read_end1_used = 0, read_end2_used = 0;
@@ -1139,6 +1140,10 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
     max_buf = 0;
     uint8_t *seq;
     while ( samread(samfp, b) >= 0) {
+        if (b->core.flag & BAM_SUPP){
+            map_supp++;
+            continue;
+        }
         if (b->core.flag & BAM_FPAIRED) {
             if (b->core.flag & BAM_FREAD1){
                 read_end1++;
@@ -1155,10 +1160,6 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
             fprintf(stderr, "\r* Processed read ends: %llu", (read_end1 + read_end2));
         if (b->core.flag & BAM_FUNMAP)
             continue;
-        if (b->core.flag & BAM_SUPP){
-            map_supp++;
-            continue;
-        }
         if (b->core.flag & BAM_FPAIRED) {
             if (b->core.flag & BAM_FREAD1){
                 read_end1_mapped++;
@@ -1357,6 +1358,7 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
     cnt[7] = reads_mapped_unique;
     cnt[8] = reads_nonredundant;
     cnt[9] = reads_nonredundant_unique;
+    cnt[10] = map_supp;
     return cnt;
 }
 
@@ -1367,7 +1369,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     struct slInt *pairsl = NULL;
     char chr[100], key[100], strand;
     unsigned int start, end, cend;
-    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 10);
+    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 11);
     unsigned long long int read_end1 = 0, read_end2 = 0;
     unsigned long long int read_end1_mapped = 0, read_end2_mapped = 0;
     unsigned long long int read_end1_used = 0, read_end2_used = 0;
@@ -1398,6 +1400,10 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     max_buf = 0;
     uint8_t *seq;
     while ( samread(samfp, b) >= 0) {
+        if (b->core.flag & BAM_SUPP){
+            map_supp++;
+            continue;
+        }
         if (b->core.flag & BAM_FPAIRED) {
             if (b->core.flag & BAM_FREAD1){
                 read_end1++;
@@ -1414,10 +1420,6 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
             fprintf(stderr, "\r* Processed read ends: %llu", (read_end1 + read_end2));
         if (b->core.flag & BAM_FUNMAP)
             continue;
-        if (b->core.flag & BAM_SUPP){
-            map_supp++;
-            continue;
-        }
         if (b->core.flag & BAM_FPAIRED) {
             if (b->core.flag & BAM_FREAD1){
                 read_end1_mapped++;
@@ -1641,6 +1643,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     cnt[7] = reads_mapped_unique;
     cnt[8] = reads_nonredundant;
     cnt[9] = reads_nonredundant_unique;
+    cnt[10] = map_supp;
     return cnt;
 }
 
@@ -2143,6 +2146,7 @@ struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, uns
     //fprintf(f, "non-redundant reads (pair): %llu\n\n", cnt2[8]);
     fprintf(f, "mapped reads (pair): %llu\n", cnt2[6]);
     fprintf(f, "uniquely mapped reads (pair) (mapQ >= %u): %llu\n", mapQ, cnt2[7]);
+    fprintf(f, "skipped supplementary alignments: %llu\n", cnt[10]);
     fprintf(f, "MRE filtered reads:\t%llu\n", cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
     fprintf(f, "    CCGG reads:\t%llu\n", cnt[0]);
     fprintf(f, "    CCGC reads:\t%llu\n", cnt[1]);
