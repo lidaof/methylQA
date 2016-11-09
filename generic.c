@@ -2146,7 +2146,7 @@ struct fragd *fragmentStats(struct hash *hash, unsigned long long int *cnt2, uns
     //fprintf(f, "non-redundant reads (pair): %llu\n\n", cnt2[8]);
     fprintf(f, "mapped reads (pair): %llu\n", cnt2[6]);
     fprintf(f, "uniquely mapped reads (pair) (mapQ >= %u): %llu\n", mapQ, cnt2[7]);
-    fprintf(f, "skipped supplementary alignments: %llu\n", cnt[10]);
+    fprintf(f, "skipped supplementary alignments: %llu\n", cnt2[10]);
     fprintf(f, "MRE filtered reads:\t%llu\n", cnt[0]+cnt[1]+cnt[2]+cnt[3]+cnt[4]);
     fprintf(f, "    CCGG reads:\t%llu\n", cnt[0]);
     fprintf(f, "    CCGC reads:\t%llu\n", cnt[1]);
