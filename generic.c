@@ -1134,11 +1134,11 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
     bam_header_t *h;
     h = samfp->header;
     b = bam_init1();
-    int8_t *buf;
-    int max_buf;
-    buf = 0;
-    max_buf = 0;
-    uint8_t *seq;
+    //int8_t *buf;
+    //int max_buf;
+    //buf = 0;
+    //max_buf = 0;
+    //uint8_t *seq;
     while ( samread(samfp, b) >= 0) {
         if (b->core.flag & BAM_SUPP){
             map_supp++;
@@ -1312,10 +1312,11 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
         if (b->core.qual >= mapQ)
             reads_nonredundant_unique++;
         //output bed
-        int i, qlen = b->core.l_qseq;
+        //int i, qlen = b->core.l_qseq;
         if(b->core.qual >= mapQ){
             fprintf(outbed_f, "%s\t%u\t%u\t", chr, start, end);
             //print read sequence
+            /*
             if (max_buf < qlen + 1 ) {
                 max_buf = qlen + 1;
                 kroundup32(max_buf);
@@ -1336,6 +1337,10 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
             for (i = 0; i < qlen; ++i)
                 buf[i] = bam_nt16_rev_table[buf[i]];
             fprintf(outbed_f, "%s", (char*)buf);
+            */
+            
+            // print read name
+            fprintf(outbed_f, "%s", bam1_qname(b));
 
             fprintf(outbed_f, "\t%i\t%c\n", b->core.qual, strand);
         }
@@ -1343,7 +1348,7 @@ unsigned long long int *sam2bed(char *samfile, char *outbed, struct hash *chrHas
     fprintf(stderr, "\r* Processed read ends: %llu\n", (read_end1 + read_end2));
     fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
     samclose(samfp);
-    free(buf);
+    //free(buf);
     bam_destroy1(b);
     freeHash(&nochr);
     freeHash(&dup);
@@ -1394,11 +1399,11 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     bam_header_t *h;
     h = samfp->header;
     b = bam_init1();
-    int8_t *buf;
-    int max_buf;
-    buf = 0;
-    max_buf = 0;
-    uint8_t *seq;
+    //int8_t *buf;
+    //int max_buf;
+    //buf = 0;
+    //max_buf = 0;
+    //uint8_t *seq;
     while ( samread(samfp, b) >= 0) {
         if (b->core.flag & BAM_SUPP){
             map_supp++;
@@ -1572,10 +1577,11 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
         if (b->core.qual >= mapQ)
             reads_nonredundant_unique++;
         //output bed
-        int i, qlen = b->core.l_qseq;
+        //int i, qlen = b->core.l_qseq;
         if(b->core.qual >= mapQ){
             fprintf(outbed_f, "%s\t%u\t%u\t", chr, start, end);
             //print read sequence
+            /*
             if (max_buf < qlen + 1 ) {
                 max_buf = qlen + 1;
                 kroundup32(max_buf);
@@ -1596,6 +1602,10 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
             for (i = 0; i < qlen; ++i)
                 buf[i] = bam_nt16_rev_table[buf[i]];
             fprintf(outbed_f, "%s", (char*)buf);
+            */
+
+            // print read name
+            fprintf(outbed_f, "%s", bam1_qname(b));
 
             fprintf(outbed_f, "\t%i\t%c\n", b->core.qual, strand);
             //output insert size
@@ -1628,7 +1638,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     *slPair = pairsl;
     fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
     samclose(samfp);
-    free(buf);
+    //free(buf);
     bam_destroy1(b);
     freeHash(&nochr);
     freeHash(&dup);
