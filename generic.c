@@ -10,6 +10,7 @@ static int binOffsetsExtended[] =
 
 char template_name[]="/tmp/methylQAXXXXXX";
 char *cpglabel[19] = {"0","1","2","3","4","5","6","7","8","9","10","11-20","21-30","31-40","41-50","51-100","101-200","201-300","\\textgreater 300"};
+char *cpglabel2[19] = {"0","1","2","3","4","5","6","7","8","9","10","11-20","21-30","31-40","41-50","51-100","101-200","201-300",">300"};
 
 /* definitions of functions */
 
@@ -580,6 +581,8 @@ void plotMappingStat(unsigned long long int *cnt, char *prefix){
         fprintf(stderr, "failed to call R for plotting");
     unlink(tmpRfile);
 }
+
+    
 
 void assignCpGcount(struct hash *chrHash, struct hash *cpgHash, struct hash *chgHash, struct hash *chhHash, char *chrom, int start, char *methycall, char strand, int left, int right, unsigned long long int *methyCnt, int fullMode){
     int i, j;
@@ -2347,11 +2350,17 @@ struct hash *calGenomeCovBedGraph(char *chrsize, char *bedgraph){
     return cov;
 }
 
-void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov, char *optm){
-    char *outfile;
+void genMeDIPTex(char *prefix, unsigned int mapQ, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov, char *optm){
+    char *outfile,*outfile2;
     if (asprintf(&outfile, "%s.tex", prefix) < 0)
         errAbort("Preparing output wrong");
+    if (asprintf(&outfile2, "%s.fullreport", prefix) < 0)
+        errAbort("Preparing output wrong");
     FILE *f = mustOpen(outfile, "w");
+    FILE *f2 = mustOpen(outfile2, "w");
+    
+    
+
     fprintf(f, "\\documentclass[12pt]{article}\n");
     fprintf(f, "\n");
     fprintf(f, "\\usepackage{fullpage}\n");
@@ -2386,6 +2395,21 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     fprintf(f, "\\includegraphics[width=6.5in]{{%s.mappingStat}.pdf}\n", prefix);
     fprintf(f, "\\end{center}\n");
     fprintf(f, "\n");
+
+    fprintf(f2, "==Mapping stats==\n");
+    fprintf(f2, " total reads (pair), %llu\n", cnt[0]);
+    fprintf(f2, "   read ends 1, %llu\n", cnt[0]);
+    fprintf(f2, "   read ends 2, %llu\n", cnt[1]);
+    fprintf(f2, "   mapped read ends 1, %llu\n", cnt[2]);
+    fprintf(f2, "   mapped read ends 2, %llu\n", cnt[3]);
+    fprintf(f2, "   used read ends 1, %llu\n", cnt[4]);
+    fprintf(f2, "   used read ends 2, %llu\n", cnt[5]);
+    fprintf(f2, " mappable reads (pair), %llu\n", cnt[6]);
+    //fprintf(f2, "non-redundant mappable reads (pair): %llu\n", cnt[8]);
+    fprintf(f2, " uniquely mapped reads (pair) (mapQ >= %u), %llu\n", mapQ, cnt[7]);
+    fprintf(f2, " non-redundant uniquely mapped reads (pair), %llu\n", cnt[9]);
+    fprintf(f2, " skipped supplementary alignments, %llu\n", cnt[10]);
+
     if(slPair != NULL){
         fprintf(f, "\\section{Fragments size distribution}\n");
         fprintf(f, "\\begin{center}\n");
@@ -2416,6 +2440,16 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
     fprintf(f, "\\includegraphics[width=6.5in]{{%s.genomeCov}.pdf}\n", prefix);
     fprintf(f, "\\end{center}\n");
     fprintf(f, "\n");
+
+    fprintf(f2, "==Genome coverage==\n");
+    fprintf(f2, " chromosome, total base, covered base, percentage\n");
+    cookie = hashFirst(cov);
+    while ( (hel = hashNext(&cookie)) != NULL ) {
+        struct gcov *g = (struct gcov *) hel->val;
+        fprintf(f2, " %s, %i, %i, %.2f%%\n", hel->name, g->total, g->cov, (((float)(g->cov))/(g->total)) * 100.0);
+    }
+    fprintf(f2, " %s, %lli, %lli, %.2f%%\n", "Whole Genome", t1, c1, (((double)c1)/t1) * 100.0);
+
     if (optm != NULL){
         fprintf(f, "\\section{CpG status}\n");
         fprintf(f, "\\subsection{CpG coverage}\n");
@@ -2424,10 +2458,13 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
         fprintf(f, "\\hline\n");
         fprintf(f, "Range & Count \\\\ \\hline\n");
         //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
+        fprintf(f2, "==CpG status==\n");
+        fprintf(f2, " Range, count\n");
         int i;
         for(i=0;i<19;i++){
             if (covCnt[i] != 0)
                 fprintf(f, "%s & %i \\\\ \\hline\n", cpglabel[i], covCnt[i]);
+                fprintf(f2, "  %s, %i\n", cpglabel2[i], covCnt[i]);
         }
         fprintf(f, "\\end{tabular}\n");
         fprintf(f, "\\end{center}\n");
@@ -2440,10 +2477,13 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
         fprintf(f, "\\begin{tabular}{|c|c|}\n");
         fprintf(f, "\\hline\n");
         fprintf(f, "Range & Count \\\\ \\hline\n");
+        fprintf(f2, "==CpG count==\n");
+        fprintf(f2, " Range, count\n");
         //fprintf(f, "0 & 45455455 \\\\ \\hline\n");
         for(i=0;i<19;i++){
             if (countCnt[i] != 0)
                 fprintf(f, "%s & %lli \\\\ \\hline\n", cpglabel[i], countCnt[i]);
+                fprintf(f2, "  %s, %lli\n", cpglabel2[i], countCnt[i]);
         }
         fprintf(f, "\\end{tabular}\n");
         fprintf(f, "\\end{center}\n");
@@ -2465,9 +2505,15 @@ void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, 
         fprintf(f, "&= \\textbf{%.2f}\n", frac);
         fprintf(f, "\\end{eqnarray*}\n");
         fprintf(f, "\n");
+        
+        fprintf(f2, "==CpG enrichment==\n");
+        fprintf(f2, " CpG enrichment = (CpG count in fragments/total base of fragments)/(CpG count in genome/total base of genome)\n");
+        fprintf(f2, " = (%lli/%lli)/(%lli/%lli)\n", countCnt[19], fragbase, cpgnum, genomebase);
+        fprintf(f2, " = %.2f\n", frac);
     }
     fprintf(f, "\\end{document}\n");
     carefulClose(&f);
+    carefulClose(&f2);
 }
 
 void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long int *cnt, unsigned long long int cnt1, struct hash *chrHash, struct hash *cpgHash, long long *cnt3, struct fragd *fragdistro){

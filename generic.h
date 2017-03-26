@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.7 (r043)"
+#define methylQA_VERSION "0.1.8 (r044)"
 /*! @abstract supplementary (since bwa mem)*/
 #define BAM_SUPP        2048
 
@@ -92,7 +92,7 @@ void writeGenomeCov(struct hash *cov, char *outfile);
 unsigned long long int *writecpgBismark(struct hash *cpgHash, char *outfile, char *outcpg, int statsOnly, int covThres);
 void plotGenomeCov(struct hash *cov, char *prefix);
 struct hash *calGenomeCovBedGraph(char *chrsize, char *bedgraph);
-void genMeDIPTex(char *prefix, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov, char *optm);
+void genMeDIPTex(char *prefix, unsigned int mapQ, unsigned long long int *cnt, long long fragbase, int *covCnt, long long *countCnt, struct slInt *slPair, struct hash *chrHash, struct hash *cov, char *optm);
 void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long int *cnt, unsigned long long int cnt1, struct hash *chrHash, struct hash *cpgHash, long long *cnt3, struct fragd *fragdistro);
 void tex2pdf(char *prefix);
 struct hash *chromHashFrombbiFile(char *bbiFile);
