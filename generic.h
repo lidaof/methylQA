@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.1.8 (r044)"
+#define methylQA_VERSION "0.1.9 (r047)"
 /*! @abstract supplementary (since bwa mem)*/
 #define BAM_SUPP        2048
 
@@ -46,6 +46,8 @@ int medip_usage();
 int main_medip(int argc, char *argv[]);
 int cpg_usage();
 int main_cpg(int argc, char *argv[]);
+int atac_usage();
+int main_atac(int argc, char *argv[]);
 int genomecov_usage();
 int main_genomecov(int argc, char *argv[]);
 int bismark_usage();
@@ -98,3 +100,4 @@ void tex2pdf(char *prefix);
 struct hash *chromHashFrombbiFile(char *bbiFile);
 void bigWigToBedGraph2(char *inFile, char *outFile, float scale, int tominus);
 void bwScale(char *bwfile, char *outbwfile, char *outbedgraph, float scale, int tominus);
+unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *chrHash, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat);

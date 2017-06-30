@@ -2,7 +2,7 @@
 
 int density_usage(){
     fprintf(stderr, "\nAnalyzing ChIP-seq data, generating density and reports.\n");
-    fprintf(stderr, "Please noticed that if reads mapped to the chromosomes which didn't existed in size file, this type of reads will be discarded.\n\n");
+    fprintf(stderr, "Please notice that if reads mapped to the chromosomes which are not in the size file, those reads will be discarded.\n\n");
     fprintf(stderr, "Usage:   methylQA density [options] <chromosome size file> <bam/sam alignment file>\n\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
     fprintf(stderr, "         -Q       unique reads mapping Quality threshold [10]\n");

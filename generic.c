@@ -1660,6 +1660,289 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     return cnt;
 }
 
+unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *chrHash, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat) {
+    samfile_t *samfp;
+    FILE *outbed_f = mustOpen(outbed, "w");
+    struct slInt *pairsl = NULL;
+    char chr[100], key[100], strand;
+    unsigned int start, end, cend;
+    unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 11);
+    unsigned long long int read_end1 = 0, read_end2 = 0;
+    unsigned long long int read_end1_mapped = 0, read_end2_mapped = 0;
+    unsigned long long int read_end1_used = 0, read_end2_used = 0;
+    unsigned long long int reads_nonredundant = 0;
+    unsigned long long int reads_nonredundant_unique = 0;
+    unsigned long long int reads_mapped = 0;
+    unsigned long long int reads_mapped_unique = 0;
+    unsigned long long int map_supp = 0;
+    struct hash *nochr = newHash(0), *dup = newHash(0);
+    if (isSam) {
+        if ( (samfp = samopen(samfile, "r", 0)) == 0) {
+            fprintf(stderr, "Fail to open SAM file %s\n", samfile);
+            errAbort("Error\n");
+        }
+    } else {
+        if ( (samfp = samopen(samfile, "rb", 0)) == 0) {
+            fprintf(stderr, "Fail to open BAM file %s\n", samfile);
+            errAbort("Error\n");
+        }
+    }
+    bam1_t *b;
+    bam_header_t *h;
+    h = samfp->header;
+    b = bam_init1();
+    //int8_t *buf;
+    //int max_buf;
+    //buf = 0;
+    //max_buf = 0;
+    //uint8_t *seq;
+    while ( samread(samfp, b) >= 0) {
+        unsigned int start1=0, start2=0,end1=0,end2=0;
+        if (b->core.flag & BAM_SUPP){
+            map_supp++;
+            continue;
+        }
+        if (b->core.flag & BAM_FPAIRED) {
+            if (b->core.flag & BAM_FREAD1){
+                read_end1++;
+            }else{
+                if(treat)
+                    read_end1++;
+                else
+                    read_end2++;
+            }
+        }else{
+            read_end1++;
+        }
+        if (((read_end1 + read_end2) % 10000) == 0)
+            fprintf(stderr, "\r* Processed read ends: %llu", (read_end1 + read_end2));
+        if (b->core.flag & BAM_FUNMAP)
+            continue;
+        if (b->core.flag & BAM_FPAIRED) {
+            if (b->core.flag & BAM_FREAD1){
+                read_end1_mapped++;
+            }else{
+                if (treat)
+                    read_end1_mapped++;
+                else
+                    read_end2_mapped++;
+            }
+        }else{
+            read_end1_mapped++;
+        }
+        //change chr name to chr1, chr2 ...
+        strcpy(chr, h->target_name[b->core.tid]);
+        if (addChr){
+            if (startsWith("GL", h->target_name[b->core.tid])) {
+                continue;
+            } else if (sameWord(h->target_name[b->core.tid], "MT")) {
+                strcpy(chr,"chrM");
+            } else if (!startsWith("chr", h->target_name[b->core.tid])) {
+                strcpy(chr, "chr");
+                strcat(chr, h->target_name[b->core.tid]);
+            }
+        }
+        //check Ref reads mapped to existed in chromosome size file or not
+        struct hashEl *he = hashLookup(nochr, chr);
+        if (he != NULL)
+            continue;
+        cend = (unsigned int) (hashIntValDefault(chrHash, chr, 2) - 1);
+        if (cend == 1){
+            hashAddInt(nochr, chr, 1);
+            warn("* Warning: read ends mapped to chromosome %s will be discarded as %s not existed in the chromosome size file", chr, chr);
+            continue;
+        }
+        if (b->core.flag & BAM_FPAIRED) {
+            if (b->core.flag & BAM_FREAD1){
+                read_end1_used++;
+            }else{
+                if (treat)
+                    read_end1_used++;
+                else
+                    read_end2_used++;
+            }
+        }else{
+            read_end1_used++;
+        }
+        //get mapping location for paired-end or single-end
+        if (treat){
+            reads_mapped++;
+            if (b->core.qual >= mapQ)
+                reads_mapped_unique++;
+            start = (unsigned int) b->core.pos;
+            int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
+            end = min(cend, (unsigned int)tmpend);
+            strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
+            if (extension) {
+                if (strand == '+'){
+                    start1 = max(0,start - extension/2);
+                    end1 = min(start + extension, cend);
+                }else{
+                    end1 = min(end + extension/2, cend);
+                    start1 = max(end - extension, 0);
+                }
+            }
+
+        }else{
+        if (b->core.flag & BAM_FPAIRED) {
+            if (!(b->core.flag & BAM_FMUNMAP)){
+                if (b->core.flag & BAM_FREAD1){
+                    if (abs(b->core.isize) > iSize || b->core.isize == 0){
+                        continue;
+                    }else{
+                        reads_mapped++;
+                        if (b->core.qual >= mapQ)
+                            reads_mapped_unique++;
+                        if (b->core.isize > 0){
+                            start = (unsigned int) b->core.pos;
+                            strand = '+';
+                            int tmpend = start + b->core.isize;
+                            end = min(cend, (unsigned int)tmpend);
+                            start1 = max(0,start - extension/2);
+                            end1 = min(start1 + extension, cend);
+                            end2 = min(end + extension/2, cend);
+                            start2 = max(end2 - extension, 0);
+                        }else{
+                            start = (unsigned int) b->core.mpos;
+                            strand = '-';
+                            int tmpend = start - b->core.isize;
+                            end = min(cend, (unsigned int)tmpend);
+                            end2 = min(end + extension/2, cend);
+                            start2 = max(end2 - extension, 0);
+                            start1 = max(0,start - extension/2);
+                            end1 = min(start1 + extension, cend);
+                        }
+                
+                    }
+                }else{
+                    continue;
+                }
+            }else{
+                if (discardWrongEnd){
+                    continue;
+                }else{
+                    reads_mapped++;
+                    if (b->core.qual >= mapQ)
+                        reads_mapped_unique++;
+                    start = (unsigned int) b->core.pos;
+                    int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
+                    end = min(cend, (unsigned int)tmpend);
+                    strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
+                    if (extension) {
+                        if (strand == '+'){
+                            start1 = max(0,start - extension/2);
+                            end1 = min(start + extension, cend);
+                        }else{
+                            end1 = min(end + extension/2, cend);
+                            start1 = max(end - extension, 0);
+                        }
+                    }
+                }
+            }
+        }else{
+            reads_mapped++;
+            if (b->core.qual >= mapQ)
+                reads_mapped_unique++;
+            start = (unsigned int) b->core.pos;
+            int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
+            end = min(cend, (unsigned int)tmpend);
+            strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
+            if (extension) {
+                if (strand == '+'){
+                    start1 = max(0,start - extension/2);
+                    end1 = min(start + extension, cend);
+                }else{
+                    end1 = min(end + extension/2, cend);
+                    start1 = max(end - extension, 0);
+                }
+            }
+        }
+    }
+        //remove dup or not
+        if (rmDup){
+            if (sprintf(key, "%s:%u:%u:%c", chr, start, end, strand) < 0)
+                errAbort("Mem ERROR");
+            struct hashEl *hel = hashLookup(dup, key);
+            if (hel == NULL) {
+                hashAddInt(dup, key, 1);
+            } else {
+                continue;
+            }
+        }
+        reads_nonredundant++;
+        if (b->core.qual >= mapQ)
+            reads_nonredundant_unique++;
+        //output bed
+        //int i, qlen = b->core.l_qseq;
+        if(b->core.qual >= mapQ){
+            fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start1, end1, bam1_qname(b),b->core.qual, strand);
+            if(start2!=0 && end2!=0){
+                fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start2, end2, bam1_qname(b),b->core.qual, strand);
+            }
+            //print read sequence
+            /*
+            if (max_buf < qlen + 1 ) {
+                max_buf = qlen + 1;
+                kroundup32(max_buf);
+                buf = realloc(buf, max_buf);
+            }
+            buf[qlen] = 0;
+            seq = bam1_seq(b);
+            for (i = 0; i < qlen; ++i)
+                buf[i] = bam1_seqi(seq, i);
+            if (b->core.flag & 16) {
+                for (i = 0; i < qlen>>1; ++i){
+                    int8_t t = seq_comp_table[buf[qlen - 1 - i]];
+                    buf[qlen - 1 - i] = seq_comp_table[buf[i]];
+                    buf[i] = t;
+                }
+                if (qlen&1) buf[i] = seq_comp_table[buf[i]];
+            }
+            for (i = 0; i < qlen; ++i)
+                buf[i] = bam_nt16_rev_table[buf[i]];
+            fprintf(outbed_f, "%s", (char*)buf);
+            */
+
+            //output insert size
+            slAddHead(&pairsl, slIntNew(end-start));
+        }
+    }
+    fprintf(stderr, "\r* Processed read ends: %llu\n", (read_end1 + read_end2));
+    if (read_end1 == read_end2) { //paired-end
+        fprintf(stderr, "* Paired end data\n");
+        //fprintf(stderr, "* %d elements\n", slCount(slPair));
+    }else{
+        if (read_end2 == 0){
+            fprintf(stderr, "* Single end data\n");
+        } else {
+            fprintf(stderr, "* Mixed of single & paired end data\n");
+            //slReverse(&pairsl); // included for avoid fragbase count as 0
+            //*slPair = pairsl;   // note the inclusion of single reads FIXME
+        }
+    }
+    slReverse(&pairsl);
+    *slPair = pairsl;
+    fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
+    samclose(samfp);
+    //free(buf);
+    bam_destroy1(b);
+    freeHash(&nochr);
+    freeHash(&dup);
+    carefulClose(&outbed_f);
+    cnt[0] = read_end1;
+    cnt[1] = read_end2;
+    cnt[2] = read_end1_mapped;
+    cnt[3] = read_end2_mapped;
+    cnt[4] = read_end1_used;
+    cnt[5] = read_end2_used;
+    cnt[6] = reads_mapped;
+    cnt[7] = reads_mapped_unique;
+    cnt[8] = reads_nonredundant;
+    cnt[9] = reads_nonredundant_unique;
+    cnt[10] = map_supp;
+    return cnt;
+}
+
 struct hash *initGenomeCovHash(struct hash *chrHash){
     struct hash *hash = newHash(0);
     struct hashEl *hel;

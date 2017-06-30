@@ -10,7 +10,7 @@ SAMLIB=$(SAMTOOLS)/libbam.a
 L = -pthread -lm -lz
 
 MYF = methylQA
-O = generic.o medip.o mre.o density.o genomecov.o bismark.o bwscale.o from_kent.o $(MYF).o
+O = generic.o medip.o mre.o atac.o density.o genomecov.o bismark.o bwscale.o from_kent.o $(MYF).o
 
 %.o: %.c
 	$(CC) $(COPT) $(CFLAGS) $(DFLAGS) $(INCLUDES) -o $@ -c $<
