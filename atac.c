@@ -7,6 +7,8 @@ int atac_usage(){
     fprintf(stderr,"        signal:   ------                ------ [extension, default 150bp]\n\n");
     fprintf(stderr,"    single:           -------------------->\n");
     fprintf(stderr,"        signal:   ------      [extension, default 150bp]\n\n");
+    fprintf(stderr, "The output .open.bed could be used for peak calling by MACS2 with --nomodel option, shifting and extension are already done\n");
+    fprintf(stderr, "You might also need keep duplicates say using --keep-dup 1000 at MACS2 as duplicates already been removed.\n\n");
     fprintf(stderr, "Please notice that if reads mapped to the chromosomes which are not in the size file, those reads will be discarded.\n\n");
     fprintf(stderr, "Usage:   methylQA atac [options] <chromosome size file> <bam/sam alignment file>\n\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
@@ -116,7 +118,7 @@ int main_atac (int argc, char *argv[]) {
 
     if(slPair != NULL){
         fprintf(stderr, "* Generating fragments size stats\n");
-        //writeInsertsize(slPair, outInsertfile);
+        writeInsertsize(slPair, outInsertfile); //write fragment length for atac-seq
         fragbase = plotInsertsize(slPair, output); //quite time consuming -- fixed
     }
     fprintf(stderr, "* fragments total base: %lli\n", fragbase);
