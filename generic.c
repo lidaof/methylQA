@@ -1875,9 +1875,9 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
         //output bed
         //int i, qlen = b->core.l_qseq;
         if(b->core.qual >= mapQ){
-            fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start1, end1, bam1_qname(b),b->core.qual, strand);
+            fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\t%i\n", chr, start1, end1, bam1_qname(b),b->core.qual, strand,b->core.isize);
             if(start2!=0 && end2!=0){
-                fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\n", chr, start2, end2, bam1_qname(b),b->core.qual, strand);
+                fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\t%i\n", chr, start2, end2, bam1_qname(b),b->core.qual, strand,b->core.isize);
             }
             //print read sequence
             /*
