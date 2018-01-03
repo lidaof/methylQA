@@ -12,10 +12,10 @@ int cpg_usage(){
     fprintf(stderr, "         -R       remove redundant reads [off]\n");
     fprintf(stderr, "         -T       treat 1 paired-end read as 2 single-end reads [off]\n");
     fprintf(stderr, "         -m       specify a CpG bed file for calculating CpG stats [null]\n");
-    fprintf(stderr, "         -D       discard if only one end mapped in a paired end reads [off]\n");
-    fprintf(stderr, "         -C       Add 'chr' string as prefix of reference sequence [off]\n");
+    fprintf(stderr, "         -D       keep reads if only one end mapped in a pair [off]\n");
+    fprintf(stderr, "         -C       add 'chr' string as prefix of reference sequence [off]\n");
     //fprintf(stderr, "         -E       output each MRE enzyme reads [off]\n");
-    fprintf(stderr, "         -I       Insert length threshold [500]\n");
+    fprintf(stderr, "         -I       insert length threshold [500]\n");
     fprintf(stderr, "         -g       guess MRE read start position, (will guess 1 or 4, only used for old NGS data)\n");
     fprintf(stderr, "         -o       output prefix [basename of input without extension]\n");
     fprintf(stderr, "         -h       help message\n");

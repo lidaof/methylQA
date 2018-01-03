@@ -1660,11 +1660,11 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     return cnt;
 }
 
-unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *chrHash, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat) {
+unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *chrHash, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat, int shift) {
     samfile_t *samfp;
     FILE *outbed_f = mustOpen(outbed, "w");
     struct slInt *pairsl = NULL;
-    char chr[100], key[100], strand;
+    char chr[100], key[100], strand, strand2='.';
     unsigned int start, end, cend;
     unsigned long long int *cnt = malloc(sizeof(unsigned long long int) * 11);
     unsigned long long int read_end1 = 0, read_end2 = 0;
@@ -1773,16 +1773,20 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
             int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
             end = min(cend, (unsigned int)tmpend);
             strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
-            if (extension) {
+            if (shift){
                 if (strand == '+'){
-                    start1 = max(0,start - extension/2);
-                    end1 = min(start + extension, cend);
+                    start += 4;
                 }else{
-                    end1 = min(end + extension/2, cend);
-                    start1 = max(end - extension, 0);
+                    end -= 5;
                 }
             }
-
+            if (strand == '+'){
+                start1 = max(0,start - extension/2);
+                end1 = min(start + extension, cend);
+            }else{
+                end1 = min(end + extension/2, cend);
+                start1 = max(end - extension, 0);
+            }
         }else{
         if (b->core.flag & BAM_FPAIRED) {
             if (!(b->core.flag & BAM_FMUNMAP)){
@@ -1796,8 +1800,13 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
                         if (b->core.isize > 0){
                             start = (unsigned int) b->core.pos;
                             strand = '+';
+                            strand2 = '-';
                             int tmpend = start + b->core.isize;
                             end = min(cend, (unsigned int)tmpend);
+                            if (shift){
+                                start += 4;
+                                end -= 5;
+                            }
                             start1 = max(0,start - extension/2);
                             end1 = min(start1 + extension, cend);
                             end2 = min(end + extension/2, cend);
@@ -1805,8 +1814,13 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
                         }else{
                             start = (unsigned int) b->core.mpos;
                             strand = '-';
+                            strand2 = '+';
                             int tmpend = start - b->core.isize;
                             end = min(cend, (unsigned int)tmpend);
+                            if (shift){
+                                start -= 5;
+                                end += 4;
+                            }
                             end2 = min(end + extension/2, cend);
                             start2 = max(end2 - extension, 0);
                             start1 = max(0,start - extension/2);
@@ -1828,14 +1842,19 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
                     int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
                     end = min(cend, (unsigned int)tmpend);
                     strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
-                    if (extension) {
+                    if (shift){
                         if (strand == '+'){
-                            start1 = max(0,start - extension/2);
-                            end1 = min(start + extension, cend);
+                            start += 4;
                         }else{
-                            end1 = min(end + extension/2, cend);
-                            start1 = max(end - extension, 0);
+                            end -= 5;
                         }
+                    }
+                    if (strand == '+'){
+                        start1 = max(0,start - extension/2);
+                        end1 = min(start + extension, cend);
+                    }else{
+                        end1 = min(end + extension/2, cend);
+                        start1 = max(end - extension, 0);
                     }
                 }
             }
@@ -1847,14 +1866,19 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
             int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
             end = min(cend, (unsigned int)tmpend);
             strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
-            if (extension) {
+            if (shift){
                 if (strand == '+'){
-                    start1 = max(0,start - extension/2);
-                    end1 = min(start + extension, cend);
+                    start += 4;
                 }else{
-                    end1 = min(end + extension/2, cend);
-                    start1 = max(end - extension, 0);
+                    end -= 5;
                 }
+            }
+            if (strand == '+'){
+                start1 = max(0,start - extension/2);
+                end1 = min(start + extension, cend);
+            }else{
+                end1 = min(end + extension/2, cend);
+                start1 = max(end - extension, 0);
             }
         }
     }
@@ -1877,7 +1901,7 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
         if(b->core.qual >= mapQ){
             fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\t%i\n", chr, start1, end1, bam1_qname(b),b->core.qual, strand,b->core.isize);
             if(start2!=0 && end2!=0){
-                fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\t%i\n", chr, start2, end2, bam1_qname(b),b->core.qual, strand,b->core.isize);
+                fprintf(outbed_f, "%s\t%u\t%u\t%s\t%i\t%c\t%i\n", chr, start2, end2, bam1_qname(b),b->core.qual, strand2,b->core.isize);
             }
             //print read sequence
             /*

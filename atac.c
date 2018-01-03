@@ -13,12 +13,13 @@ int atac_usage(){
     fprintf(stderr, "Usage:   methylQA atac [options] <chromosome size file> <bam/sam alignment file>\n\n");
     fprintf(stderr, "Options: -S       input is SAM [off]\n");
     fprintf(stderr, "         -Q       unique reads mapping Quality threshold [10]\n");
-    fprintf(stderr, "         -r       do NOT remove redundant reads [off]\n");
+    fprintf(stderr, "         -r       keep redundant reads [off]\n");
     fprintf(stderr, "         -T       treat 1 paired-end read as 2 single-end reads [off]\n");
-    fprintf(stderr, "         -D       do NOT discard if only one end mapped in a paired end reads [off]\n");
-    fprintf(stderr, "         -C       Add 'chr' string as prefix of reference sequence [off]\n");
+    fprintf(stderr, "         -D       keep reads if only one end mapped in a pair [off]\n");
+    fprintf(stderr, "         -C       add 'chr' string as prefix of reference sequence [off]\n");
+    fprintf(stderr, "         -s       use mapped position as the cut site, no shift +4 for plus strand, -5 for minus strand [off]\n");
     fprintf(stderr, "         -E       extension length to both direction at mapping locus [150]\n");
-    fprintf(stderr, "         -I       Insert length threshold [500]\n");
+    fprintf(stderr, "         -I       insert length threshold [500]\n");
     fprintf(stderr, "         -o       output prefix [basename of input without extension]\n");
     fprintf(stderr, "         -h       help message\n");
     fprintf(stderr, "         -?       help message\n");
@@ -31,7 +32,7 @@ int main_atac (int argc, char *argv[]) {
     
     char *output, *outReportfile, *outExtfile, *outbedGraphfile, *outbigWigfile, *outInsertfile, *outGenomeCov;
     unsigned long long int *cnt;
-    int optSam = 0, c, optDup = 1, optaddChr = 0, optDis = 1, optTreat = 0;
+    int optSam = 0, c, optDup = 1, optaddChr = 0, optDis = 1, optTreat = 0, optShift = 1;
     unsigned int optQual = 10, optExt = 150, optisize = 500;
     char *optoutput = NULL;
     time_t start_time, end_time;
@@ -39,7 +40,7 @@ int main_atac (int argc, char *argv[]) {
     struct slInt *slPair = NULL;
     long long fragbase = 0;
     
-    while ((c = getopt(argc, argv, "SQ:rTDCo:E:I:h?")) >= 0) {
+    while ((c = getopt(argc, argv, "SQ:rTDCso:E:I:h?")) >= 0) {
         switch (c) {
             case 'S': optSam = 1; break;
             case 'Q': optQual = (unsigned int)strtol(optarg, 0, 0); break;
@@ -47,6 +48,7 @@ int main_atac (int argc, char *argv[]) {
             case 'T': optTreat = 1; break;
             case 'D': optDis = 0; break;
             case 'C': optaddChr = 1; break;
+            case 's': optShift = 0; break;
             case 'E': optExt = (unsigned int)strtol(optarg, 0, 0); break;
             case 'I': optisize = (unsigned int)strtol(optarg, 0, 0); break;
             case 'o': optoutput = strdup(optarg); break;
@@ -91,7 +93,7 @@ int main_atac (int argc, char *argv[]) {
 
     //sam file to bed file
     fprintf(stderr, "* Parsing the SAM/BAM file\n");
-    cnt = ATACsam2bed(sam_file, outExtfile, hash, &slPair, optSam, optQual, optDup, optaddChr, optDis, optisize, optExt, optTreat);
+    cnt = ATACsam2bed(sam_file, outExtfile, hash, &slPair, optSam, optQual, optDup, optaddChr, optDis, optisize, optExt, optTreat, optShift);
     //sort
     //fprintf(stderr, "\n* Sorting\n");
     //bedSortFile(outBedfile, outBedfile);
