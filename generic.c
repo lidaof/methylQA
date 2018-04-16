@@ -1660,7 +1660,7 @@ unsigned long long int *sam2bedwithCpGstat(char *samfile, char *outbed, struct h
     return cnt;
 }
 
-unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *chrHash, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int extension, int treat, int shift) {
+unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *chrHash, struct slInt **slPair, int isSam, unsigned int mapQ, int rmDup, int addChr, int discardWrongEnd, unsigned int iSize, unsigned int xSize, unsigned int extension, int treat, int shift) {
     samfile_t *samfp;
     FILE *outbed_f = mustOpen(outbed, "w");
     struct slInt *pairsl = NULL;
@@ -1675,6 +1675,7 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
     unsigned long long int reads_mapped = 0;
     unsigned long long int reads_mapped_unique = 0;
     unsigned long long int map_supp = 0;
+    unsigned long long int skip_isize = 0, skip_xsize = 0;
     struct hash *nochr = newHash(0), *dup = newHash(0);
     if (isSam) {
         if ( (samfp = samopen(samfile, "r", 0)) == 0) {
@@ -1791,7 +1792,13 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
         if (b->core.flag & BAM_FPAIRED) {
             if (!(b->core.flag & BAM_FMUNMAP)){
                 if (b->core.flag & BAM_FREAD1){
-                    if (abs(b->core.isize) > iSize || b->core.isize == 0){
+                    if (b->core.isize == 0){
+                        continue;
+                    }else if (abs(b->core.isize) > iSize){
+                        skip_isize++;
+                        continue;
+                    }else if(abs(b->core.isize) < xSize){
+                        skip_xsize++;
                         continue;
                     }else{
                         reads_mapped++;
@@ -1947,6 +1954,8 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
     slReverse(&pairsl);
     *slPair = pairsl;
     fprintf(stderr, "* Skipped supplementary alignments: %llu\n", map_supp);
+    fprintf(stderr, "* Skipped %llu\n fragments longer than threshold [%u]", skip_isize, iSize);
+    fprintf(stderr, "* Skipped %llu\n fragments shorter than threshold [%u]", skip_xsize, xSize);
     samclose(samfp);
     //free(buf);
     bam_destroy1(b);

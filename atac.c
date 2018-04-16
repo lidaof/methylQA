@@ -19,7 +19,8 @@ int atac_usage(){
     fprintf(stderr, "         -C       add 'chr' string as prefix of reference sequence [off]\n");
     fprintf(stderr, "         -s       use mapped position as the cut site, no shift +4 for plus strand, -5 for minus strand [off]\n");
     fprintf(stderr, "         -E       extension length to both direction at mapping locus [150]\n");
-    fprintf(stderr, "         -I       insert length threshold [500]\n");
+    fprintf(stderr, "         -I       maximal insert length threshold [500]\n");
+    fprintf(stderr, "         -X       minimal insert length threshold [50]\n");
     fprintf(stderr, "         -o       output prefix [basename of input without extension]\n");
     fprintf(stderr, "         -h       help message\n");
     fprintf(stderr, "         -?       help message\n");
@@ -33,14 +34,14 @@ int main_atac (int argc, char *argv[]) {
     char *output, *outReportfile, *outExtfile, *outbedGraphfile, *outbigWigfile, *outInsertfile, *outGenomeCov;
     unsigned long long int *cnt;
     int optSam = 0, c, optDup = 1, optaddChr = 0, optDis = 1, optTreat = 0, optShift = 1;
-    unsigned int optQual = 10, optExt = 150, optisize = 500;
+    unsigned int optQual = 10, optExt = 150, optisize = 500, optxsize=50;
     char *optoutput = NULL;
     time_t start_time, end_time;
     start_time = time(NULL);
     struct slInt *slPair = NULL;
     long long fragbase = 0;
     
-    while ((c = getopt(argc, argv, "SQ:rTDCso:E:I:h?")) >= 0) {
+    while ((c = getopt(argc, argv, "SQ:rTDCso:E:I:X:h?")) >= 0) {
         switch (c) {
             case 'S': optSam = 1; break;
             case 'Q': optQual = (unsigned int)strtol(optarg, 0, 0); break;
@@ -51,6 +52,7 @@ int main_atac (int argc, char *argv[]) {
             case 's': optShift = 0; break;
             case 'E': optExt = (unsigned int)strtol(optarg, 0, 0); break;
             case 'I': optisize = (unsigned int)strtol(optarg, 0, 0); break;
+            case 'X': optxsize = (unsigned int)strtol(optarg, 0, 0); break;
             case 'o': optoutput = strdup(optarg); break;
             case 'h':
             case '?': return atac_usage(); break;
@@ -93,7 +95,7 @@ int main_atac (int argc, char *argv[]) {
 
     //sam file to bed file
     fprintf(stderr, "* Parsing the SAM/BAM file\n");
-    cnt = ATACsam2bed(sam_file, outExtfile, hash, &slPair, optSam, optQual, optDup, optaddChr, optDis, optisize, optExt, optTreat, optShift);
+    cnt = ATACsam2bed(sam_file, outExtfile, hash, &slPair, optSam, optQual, optDup, optaddChr, optDis, optisize, optxsize, optExt, optTreat, optShift);
     //sort
     //fprintf(stderr, "\n* Sorting\n");
     //bedSortFile(outBedfile, outBedfile);
