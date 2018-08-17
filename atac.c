@@ -19,8 +19,8 @@ int atac_usage(){
     fprintf(stderr, "         -C       add 'chr' string as prefix of reference sequence [off]\n");
     fprintf(stderr, "         -s       use mapped position as the cut site, no shift +4 for plus strand, -5 for minus strand [off]\n");
     fprintf(stderr, "         -E       extension length to both direction at mapping locus [150]\n");
-    fprintf(stderr, "         -I       maximal insert length threshold [500]\n");
-    fprintf(stderr, "         -X       minimal insert length threshold [50]\n");
+    fprintf(stderr, "         -I       maximal insert (paired) length threshold [500]\n");
+    fprintf(stderr, "         -X       minimal insert (paired)/fragment (single) length threshold [50]\n");
     fprintf(stderr, "         -o       output prefix [basename of input without extension]\n");
     fprintf(stderr, "         -h       help message\n");
     fprintf(stderr, "         -?       help message\n");

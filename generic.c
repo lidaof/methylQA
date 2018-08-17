@@ -1872,6 +1872,10 @@ unsigned long long int *ATACsam2bed(char *samfile, char *outbed, struct hash *ch
             start = (unsigned int) b->core.pos;
             int tmpend = b->core.n_cigar? bam_calend(&b->core, bam1_cigar(b)) : b->core.pos + b->core.l_qseq;
             end = min(cend, (unsigned int)tmpend);
+            if ((end - start) < xSize) {
+                skip_xsize++;
+                continue;
+            }
             strand = (b->core.flag&BAM_FREVERSE)? '-' : '+';
             if (shift){
                 if (strand == '+'){
@@ -2950,7 +2954,8 @@ void genMRETex(char *prefix, unsigned long long int *cnt2, unsigned long long in
 
 void tex2pdf(char *prefix){
     char *command;
-    if (asprintf(&command, "pdflatex %s >/dev/null 2>&1", prefix) < 0)
+    //if (asprintf(&command, "pdflatex %s >/dev/null 2>&1", prefix) < 0)
+    if (asprintf(&command, "pdflatex %s", prefix) < 0)
         errAbort("Preparing command wrong");
     if (system(command) == -1)
         fprintf(stderr, "failed to call pdflatex for generating PDF report.");

@@ -1,7 +1,7 @@
 #include "sam.h"
 #include "from_kent.h"
 
-#define methylQA_VERSION "0.2.1 (r052)"
+#define methylQA_VERSION "0.2.1 (r053)"
 /*! @abstract supplementary (since bwa mem)*/
 #define BAM_SUPP        2048
 
